@@ -18,7 +18,8 @@ En estos jupyter notebooks describiremos algunos de los métodos utilizados en l
 
 ## Temas
 
-1. [Método deterministicos:](https://nbviewer.jupyter.org/github/rirastorza/Intro2FEM/blob/master/Polinomios_constantes_atrozo/polinomios.ipynb) aquí se comentarán los métodos no iterativos: Born y Back-Propagation, y los métodos iterativos: Distorted Born, Contrast Source Inversion Method, etc.
+1. [Método deterministicos:](https://github.com/rirastorza/Intro2MI/tree/main/metodos_deterministicos) aquí se comentarán los métodos no iterativos: Born y Back-Propagation, y los métodos iterativos: Distorted Born, Contrast Source Inversion Method, etc.
+  a. [Método de Born](https://github.com/rirastorza/Intro2MI/blob/main/metodos_deterministicos/metodo_Born.ipynb)
 
 2. Métodos estocásticos
 
