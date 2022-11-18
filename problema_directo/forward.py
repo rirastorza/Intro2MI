@@ -86,6 +86,132 @@ def cart2pol(x,y):
 # - Definición de funciones 
 #
 
+#
+# - Definición de funciones canónicas
+#
+
+#Calcula onda cilíndrica debido a una línea infinita de corriente
+#implementado basado en (5-119) y (5-103) en [Harrington2001]
+def EINC_LINESOURCE(source_location, sensor_location,acoplante):
+    epsrC = acoplante.epsr + acoplante.sigma/(2j*pi*acoplante.f*eps0)
+    k = 2*pi*acoplante.f*((epsrC*acoplante.mur)**0.5)/c
+    factor= -k**2./(4.*2.*pi*acoplante.f*epsrC*eps0)
+    phi_s, rho_s = cart2pol(source_location[0],source_location[1])
+    phi, rho = cart2pol(sensor_location[0],sensor_location[1])
+    absrho = (rho**2.+rho_s**2.-2.0*rho*rho_s*N.cos(phi-phi_s))**0.5
+    #Cuidado: ver expresión Ecuación siguiente a Ec. (5-102) en Harrington
+    Ezinc = factor*special.hankel2(0,k*absrho)
+
+    return Ezinc
+
+#Solución teórica de scattering de un cilindro centrado en (0,0) en un punto.
+#CUIDADO: dentro del cilindro la solución da el campo total
+#pero afuer da el campo disperso.
+def EZ_CILINDRO_LINESOURCE(cilindro,acoplante,source_location, sensor_location):
+    frecuencia = acoplante.f
+    epsrC1 = acoplante.epsr + acoplante.sigma/(2j*pi*acoplante.f*eps0)
+    omega         = 2*pi*frecuencia
+    phi_s, rho_s  = cart2pol(source_location[0], source_location[1])
+    phi, rho      = cart2pol(sensor_location[0], sensor_location[1])
+    epsrC2 = cilindro.epsr + cilindro.sigma/(2j*pi*cilindro.f*eps0)
+    k_1 = 2*pi*acoplante.f*((epsrC1*acoplante.mur)**0.5)/c
+    #print(acoplante.sigma,k_1,epsrC1)
+    k_2 = 2*pi*cilindro.f*((epsrC2*cilindro.mur)**0.5)/c
+    x_1 = k_1*cilindro.radio
+    x_2 = k_2*cilindro.radio
+
+    N_max = 80
+    nu    = N.arange(-N_max,N_max+1)
+
+    #Ez = factor*N.sum(special.hankel2(nu,x_s)*special.jn(nu, x)*N.exp(1j*nu*(phi-phi_s)))
+    factor= -k_1**2./(4.*2.*pi*frecuencia*epsrC1*eps0)
+
+    if (rho < rho_s): # inside source
+        if (rho < cilindro.radio): # inside cylinder OK!
+
+            dn_num =  k_1*special.jn(nu,x_1)*special.h2vp(nu,x_1)-k_1*special.hankel2(nu,x_1)*special.jvp(nu,x_1)
+
+            dn_den =  k_1*special.jn(nu,x_2)*special.h2vp(nu,x_1)-k_2*special.hankel2(nu,x_1)*special.jvp(nu,x_2)
+
+            dn     =  dn_num/dn_den
+
+            Ez    = factor*N.sum(dn*special.hankel2(nu,k_1*rho_s)*special.jn(nu,k_2*rho)*N.exp(1j*nu*(phi-phi_s)))
+
+        else: # outside cylinder (campo disperso) OK!
+
+            cn_num =  k_1*special.jn(nu,x_2)*special.jvp(nu,x_1)-k_2*special.jn(nu,x_1)*special.jvp(nu,x_2)
+
+            cn_den =  -k_1*special.jn(nu,x_2)*special.h2vp(nu,x_1)+k_2*special.hankel2(nu,x_1)*special.jvp(nu,x_2)
+
+            cn     =  cn_num/cn_den;
+
+            Ez    = factor*N.sum(cn*special.hankel2(nu,k_1*rho_s)*special.hankel2(nu,k_1*rho)*N.exp(1j*nu*(phi-phi_s)));
+
+        #end
+    else: # outside source radius (es igual que adentro?) (LO MODIFIQUÉ!)
+
+        cn_num =  k_1*special.jn(nu,x_2)*special.jvp(nu,x_1)-k_2*special.jn(nu,x_1)*special.jvp(nu,x_2)
+
+        cn_den =  -k_1*special.jn(nu,x_2)*special.h2vp(nu,x_1)+k_2*special.hankel2(nu,x_1)*special.jvp(nu,x_2)
+
+        dn     =  cn_num/cn_den;
+
+        Ez = factor*N.sum(dn*special.hankel2(nu,k_1*rho_s)*special.hankel2(nu,k_1*rho)*N.exp(1j*nu*(phi-phi_s)));
+
+    #end
+
+    return Ez
+
+#Solución teórica de scattering de un cilindro centrado en (0,0) para una matriz de tamaño de epsilon
+def EZ_CILINDER_LINESOURCE_MATRIZ(epsilon,cilindro, acoplante,trans,Tx,deltaX):
+    rhoS = trans.rhoS
+    x = N.linspace(-len(epsilon)*deltaX/2., len(epsilon)*deltaX/2., len(epsilon))
+
+    xt = (rhoS)*N.cos(Tx*2*pi/trans.S) #Coordenada x antena transmisora
+    yt = (rhoS)*N.sin(Tx*2*pi/trans.S) #Coordenada y antena transmisora
+
+    postrans = [xt,yt]
+
+    x = N.linspace(-len(epsilon)*deltaX/2.+deltaX/2, len(epsilon)*deltaX/2.-deltaX/2, len(epsilon))
+    y = N.linspace(-len(epsilon)*deltaX/2.+deltaX/2, len(epsilon)*deltaX/2.-deltaX/2, len(epsilon))
+    xv, yv = N.meshgrid(x, y)
+
+    Ezinc = N.zeros_like(epsilon,dtype=complex)
+    Einc = N.zeros_like(epsilon,dtype=complex)
+    Ezt = N.zeros_like(epsilon,dtype=complex)
+    Ezs = N.zeros_like(epsilon,dtype=complex)
+
+    Matriz = N.zeros_like(epsilon)
+
+    phi_s, rho_s  = cart2pol(xt, yt)
+
+    for nx in range(len(Ezinc[:,0])):
+        for ny in range(len(Ezinc[0,:])):
+            rho = (x[nx]**2.+y[ny]**2.)**0.5
+            if (rho < rho_s): #Dentro del radio de la fuente
+                if (rho > cilindro.radio):#Fuera del cilindro
+                    Ezinc[nx,ny] = EINC_LINESOURCE([xt,yt], [x[nx],y[ny]],acoplante)
+                    #Einc[nx,ny] = Ezinc[nx,ny]
+                    Ezs[nx,ny] = EZ_CILINDRO_LINESOURCE(cilindro,acoplante,[xt,yt], [x[nx],y[ny]])
+
+                else:#Dentro del cilindro
+                    Ezt[nx,ny] = EZ_CILINDRO_LINESOURCE(cilindro,acoplante,[xt,yt], [x[nx],y[ny]])
+                    #Einc[nx,ny] = EINC_LINESOURCE([xt,yt], [x[nx],y[ny]],acoplante)
+            else:
+                Ezinc[nx,ny] = EINC_LINESOURCE([xt,yt], [x[nx],y[ny]],acoplante)
+                Ezs[nx,ny] = EZ_CILINDRO_LINESOURCE(cilindro,acoplante,[xt,yt], [x[nx],y[ny]])
+                #Einc[nx,ny] = Ezinc[nx,ny]
+
+
+    Eztheory = Ezinc+Ezt+Ezs
+
+    return x,Eztheory
+
+
+
+#
+# - Funciones numéricas (FDTD)
+#
 
 #
 # - Función numérica con FDTD utilizando software meep
@@ -132,7 +258,7 @@ def RunMeep(cilindro, acoplante,trans, Tx,caja,RES = 5,calibration = False):
     sim = mp.Simulation(cell_size=cell, sources=sources, resolution=res, default_material=default_material, eps_averaging=False, geometry=geometry,boundary_layers=pml_layers,force_complex_fields = True)
     
 
-    nt = 1500
+    nt = 600
 
     sim.run(until=nt)
     
