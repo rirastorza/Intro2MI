@@ -21,7 +21,8 @@ En estos jupyter notebooks describiremos algunos de los métodos utilizados en l
 1. [Problema directo](https://github.com/rirastorza/Intro2MI/tree/main/problema_directo) aquí se comentarán tres métodos numéricos para resolver el problema directo: FDTD, FEM, y MoM.<br>
    a. [FDTD](https://github.com/rirastorza/Intro2MI/blob/main/problema_directo/sim2.ipynb). Se comenta el uso de las herramientas de simulación con diferencias finitas con un ejemplo de calibración del setup experimental.<br>
    b. FEM. Se comenta la simulación del problema directo utilizando el método de elmentos finitos. En particular se compara la solución con la analítica.<br>
-   c. [Calibración](https://github.com/rirastorza/Intro2MI/blob/main/problema_directo/sim0.ipynb). Se comenta la simulación de un cilindro centrado y descentrado con FDTD y la comparación con datos experimentales.<br>
+   c. MoM. Se comenta la simulación del problema directo utilizando el método de los momentos. En particular se compara la solución con la analítica.<br>
+   d. [Calibración](https://github.com/rirastorza/Intro2MI/blob/main/problema_directo/sim0.ipynb). Se comenta la simulación de un cilindro centrado y descentrado con FDTD y la comparación con datos experimentales.<br>
 
 2. [Método deterministicos:](https://github.com/rirastorza/Intro2MI/tree/main/metodos_deterministicos) aquí se comentarán los métodos no iterativos: Born y Back-Propagation, y los métodos iterativos: Distorted Born, Contrast Source Inversion Method, etc.<br>
    a. [Método de Born](https://github.com/rirastorza/Intro2MI/blob/main/metodos_deterministicos/metodo_Born.ipynb)<br>
