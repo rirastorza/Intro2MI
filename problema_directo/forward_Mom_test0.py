@@ -134,28 +134,27 @@ for n in range(20):
 X_obs = np.tile(X.T,(M*M,1)).T# Ns x M^2
 Y_obs = np.tile(Y.T,(M*M,1)).T# Ns x M^2
 
-R = np.sqrt((X_obs-np.tile(x.reshape((M*M,1)).T,(Ns,1)))**2+(Y_obs-np.tile(y.reshape((M*M,1)).T,(Ns,1)))**2) # Ns x M^2
-
-atest = x.reshape((1,M*M))
-print(X_obs)
-#ZZ = -imp*np.pi*cellrad/2*special.jv(1,k0*cellrad)*special.hankel1(0,k0*R)#Ns x M^2
-
-#E_s = np.matmul(ZZ,J)# Ns x Ni
+R = np.sqrt((X_obs-np.tile(x.reshape((M*M,1),order = 'F').T,(Ns,1)))**2+(Y_obs-np.tile(y.reshape((M*M,1),order = 'F').T,(Ns,1)))**2) # Ns x M^2
 
 
-#plt.figure()
-#extent2=[-1,1,-1,1]
-#plt.imshow(epsono_r,extent = extent2,origin='lower')#cmap = 'binary')
-##plt.plot(xS,yS,'ow')
-#plt.colorbar()
+ZZ = -imp*np.pi*cellrad/2*special.jv(1,k0*cellrad)*special.hankel1(0,k0*R)#Ns x M^2
 
-#plt.figure()
-##extent2=[-0.25/2,0.25/2,-0.25/2,0.25/2]
-#plt.imshow(abs(E_s).T,)#origin='lower')#,extent = extent2)#cmap = 'binary')
-##plt.plot(xS,yS,'ow')
-#plt.colorbar()
+E_s = np.matmul(ZZ,J)# Ns x Ni
 
-#plt.show()
+
+plt.figure()
+extent2=[-1,1,-1,1]
+plt.imshow(epsono_r,extent = extent2,origin='lower')#cmap = 'binary')
+#plt.plot(xS,yS,'ow')
+plt.colorbar()
+
+plt.figure()
+#extent2=[-0.25/2,0.25/2,-0.25/2,0.25/2]
+plt.imshow(abs(E_s),)#origin='lower')#,extent = extent2)#cmap = 'binary')
+#plt.plot(xS,yS,'ow')
+plt.colorbar()
+print(E_s[13,4:8])
+plt.show()
 
 ##%
 ##%
