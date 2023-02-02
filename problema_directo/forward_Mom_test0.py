@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-#Solución teórica con MoM de línea de corriente en 2D
+#Solución con MoM de onda plana en 2D y propagación en vacio
 #problema directo usando convolución circular y fft
 
 import numpy as np
@@ -16,7 +16,7 @@ mu0 = S.mu_0
 
 
 freq = 400e6
-landa = 3e8/freq # the wavelength in the air
+landa = c/freq # the wavelength in the air
 k0 = 2*pi/landa # the wave number in the air
 imp = 120*pi # impedance of air
 size_DOI = 2 # size of DOI
@@ -72,8 +72,11 @@ def AH(J,Z,M,landa,epsono_r):
 
 
 #Positions of the cells 
-M = 10 # the square containing the object has a dimension of MxM
+M = 40 # the square containing the object has a dimension of MxM
 d = size_DOI/M #the nearest distance of two cell centers
+print('landa: ',landa/(epsono_r_c)**.5)
+print('d: ',d)
+
 tx = d*np.linspace(-(M-1)/2,(M-1)/2,num=M,endpoint = True) #((-(M-1)/2):1:((M-1)/2))*d # 1 x M
 ty = d*np.linspace((M-1)/2,-(M-1)/2,num=M,endpoint = True) #((-(M-1)/2):1:((M-1)/2))*d # 1 x M
 x, y = np.meshgrid(tx, ty)# M x M
@@ -103,7 +106,7 @@ print(Z[3,0])
 #Incident wave (ONDA PLANA)
 E_inc = np.exp(np.matmul((1j*k0*x.T.flatten()).reshape((M**2,1)),(np.cos(theta.T.flatten())).T.reshape((1,Ni)))+np.matmul((1j*k0*y.T.flatten()).reshape((M**2,1)),(np.sin(theta.T.flatten())).T.reshape((1,Ni))))# M^2 x Ni
 
-print(E_inc[3,0])
+print(E_inc.shape)
 
 b = (-1j*2*pi/(landa*imp))*np.tile((epsono_r.T.flatten()-1).reshape((M**2,1)),(1,Ni))*E_inc # M^2 x Ni
 
@@ -150,7 +153,7 @@ plt.colorbar()
 
 plt.figure()
 #extent2=[-0.25/2,0.25/2,-0.25/2,0.25/2]
-plt.imshow(abs(E_s),)#origin='lower')#,extent = extent2)#cmap = 'binary')
+plt.imshow(abs(E_s),cmap = 'pink')#origin='lower')#,extent = extent2)#cmap = 'binary')
 #plt.plot(xS,yS,'ow')
 plt.colorbar()
 print(E_s[13,4:8])
