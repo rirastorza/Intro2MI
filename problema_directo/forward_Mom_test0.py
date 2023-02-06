@@ -112,13 +112,13 @@ b = (-1j*2*pi/(landa*imp))*np.tile((epsono_r.T.flatten()-1).reshape((M**2,1)),(1
 
 #Using conjugate-gradient method
 np.random.seed(0)
-#Jo = np.random.randn(M**2,Ni) # M^2 x Ni
-Jo = 0.1*np.ones((M**2,Ni))
+Jo = np.random.randn(M**2,Ni) # M^2 x Ni
+#Jo = 0.1*np.ones((M**2,Ni))
 go = AH(A(Jo,Z,M,landa,epsono_r)-b,Z,M,landa,epsono_r)
 po = -go
 
 
-for n in range(20):
+for n in range(100):
     alphao = -np.sum(np.conj(A(po,Z,M,landa,epsono_r))*(A(Jo,Z,M,landa,epsono_r)-b),axis=0)/np.linalg.norm(A(po,Z,M,landa,epsono_r).reshape((M**2*Ni,1)))**2 # 1 x Ni
     J = Jo+np.tile(alphao,(M**2,1))*po # M^2 x Ni
     g = AH(A(J,Z,M,landa,epsono_r)-b,Z,M,landa,epsono_r)# % M^2 x Ni
