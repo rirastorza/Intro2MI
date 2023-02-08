@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-#Solución con MoM de onda plana en 2D y propagación en medio con perdidas
+#Solución con MoM de onda CILÍNDRICA en 2D y propagación en medio con perdidas
 #problema directo usando convolución circular y fft
 
 import numpy as np
@@ -76,7 +76,7 @@ def AH(J,Z,M,landa,epsono_r,epsrCb):
 
 
 #Positions of the cells 
-M = 180 # the square containing the object has a dimension of MxM
+M = 150 # the square containing the object has a dimension of MxM
 d = size_DOI/M #the nearest distance of two cell centers
 print('landa: ',landa0/(epsono_r_c.real)**.5)
 print('d: ',d)
@@ -88,7 +88,7 @@ celldia = 2*np.sqrt(d**2/pi) # diameter of cells
 cellrad = celldia/2 #radius of cells
 
 #Relative permittivity of each cell
-r_cilinder = 50.0e-3
+r_cilinder = 25.0e-3# 50.0e-3
 epsono_r = epsrCb*np.ones((M,M),dtype = complex)
 epsono_r[(x-0.0)**2+(y-0.0)**2 <= r_cilinder**2] = epsono_r_c
 #epsono_r[(x+0.3)**2+(y-0.6)**2<=0.2**2] = epsono_r_c
@@ -107,8 +107,32 @@ Z[:M,M:(2*M-1)] = ZZ[M-1:(2*M-1),:(M-1)]
 Z[M:(2*M-1),:M] = ZZ[:(M-1),(M-1):(2*M-1)]
 
 
-#Incident wave (ONDA PLANA), pag 60, Pastorino, Microwave imaging.
-E_inc = np.exp(np.matmul((1j*kb*x.T.flatten()).reshape((M**2,1)),(np.cos(theta.T.flatten())).T.reshape((1,Ni)))+np.matmul((1j*kb*y.T.flatten()).reshape((M**2,1)),(np.sin(theta.T.flatten())).T.reshape((1,Ni))))# M^2 x Ni
+#Einc CILÍNDRICO implementado basado en (5-119) y (5-103) en [Harrington2001]
+def cart2pol(x,y):
+    rho = (x**2.0+y**2.0)**0.5
+    phi = np.arctan2(y,x)
+    #phi = N.arctan(y/x)
+    return phi,rho
+
+print('Fuente: ',R_obs, theta.T.flatten())
+rho_s = R_obs
+phi_s = theta.T.flatten()
+phi, rho = cart2pol(x.T.flatten(),y.T.flatten())
+absrho = np.zeros((M**2,Ni),dtype = complex)
+for mm,angulo in enumerate(phi_s):
+    absrho[:,mm] = (rho**2.+rho_s**2.-2.0*rho*rho_s*np.cos(phi-angulo))**0.5
+    
+#Cuidado: ver expresión Ecuación siguiente a Ec. (5-102) en Harrington
+#con I = 1 (fuente de corriente) o pag 60 Pastorino
+E_inc = -2*pi*freq*mu0/4*special.hankel2(0,kb*absrho)
+#print(phi.shape,rho.shape,E_inc.shape)
+
+#plt.figure()
+#plt.imshow(abs(E_inc[:,2].reshape((M,M))),cmap = 'pink')#origin='lower')#,extent = extent2)#cmap = 'binary')
+#plt.colorbar()
+
+
+##E_inc = np.exp(np.matmul((1j*kb*x.T.flatten()).reshape((M**2,1)),(np.cos(theta.T.flatten())).T.reshape((1,Ni)))+np.matmul((1j*kb*y.T.flatten()).reshape((M**2,1)),(np.sin(theta.T.flatten())).T.reshape((1,Ni))))# M^2 x Ni
 
 b = (-1j*2*pi/(landa0*imp0))*np.tile((epsono_r.T.flatten()-epsrCb).reshape((M**2,1)),(1,Ni))*E_inc # M^2 x Ni
 
@@ -165,14 +189,7 @@ plt.figure()
 plt.plot(abs(E_s)[:,0],'o-')
 #plt.colorbar()
 
-np.savez('test_M_'+str(M)+'_niter_'+str(niter), Es=E_s)
+np.savez('test_cil_M_'+str(M)+'_niter_'+str(niter), Es=E_s)
 
-#plt.show()
+plt.show()
 
-####%
-####%
-####%nl = 0; % noise level || eg: when noise level is 10%, nl = 0.1.
-####%rand_real = randn(Ns,Ni);
-####%rand_imag = randn(Ns,Ni);
-####%E_Gaussian = 1/sqrt(2) *sqrt(1/Ns/Ni)*norm(E_s,'fro') *nl*(rand_real +1i*rand_imag);
-####%E_s = E_s + E_Gaussian;
