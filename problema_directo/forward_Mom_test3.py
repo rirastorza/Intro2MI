@@ -26,7 +26,7 @@ imp0 = 120*pi # imp0edance of air
 
 size_DOI = 0.25 # size of DOI
 Ni = 8 # number of incidence
-Ns = 32 # number of receiving antennas
+Ns = 8 # number of receiving antennas
 theta = np.linspace(0,2*pi-2*pi/Ni, num=Ni, endpoint=True) # angle of incidence
 phi = 2*pi*np.linspace(0,(Ns-1)/Ns,num=Ns, endpoint=True) # 1 x Ns | angle of receiving antennas
 R_obs = 0.075 # radius of the circle formed by receiving antennas
@@ -76,7 +76,7 @@ def AH(J,Z,M,landa,epsono_r,epsrCb):
 
 
 #Positions of the cells 
-M = 150 # the square containing the object has a dimension of MxM
+M = 50 # the square containing the object has a dimension of MxM
 d = size_DOI/M #the nearest distance of two cell centers
 print('landa: ',landa0/(epsono_r_c.real)**.5)
 print('d: ',d)
@@ -169,7 +169,24 @@ R = np.sqrt((X_obs-np.tile(x.reshape((M*M,1),order = 'F').T,(Ns,1)))**2+(Y_obs-n
 ZZ = -imp0*pi*cellrad/2*special.jv(1,kb*cellrad)*special.hankel1(0,kb*R)#Ns x M^2
 
 E_s = np.matmul(ZZ,J)# Ns x Ni
-print(E_s.shape)
+
+
+#Para computar el campo total, es el incidente más el disperso
+rho_s = R_obs
+phi_s = theta.T.flatten()
+rho = R_obs
+phi = theta.T.flatten()
+absrho = np.zeros((int(Ns),int(Ni)),dtype = complex)
+for mm,angulo in enumerate(phi_s):
+    absrho[:,mm] = (rho**2.+rho_s**2.-2.0*rho*rho_s*np.cos(phi-angulo))**0.5
+    
+#Cuidado: ver expresión Ecuación siguiente a Ec. (5-102) en Harrington
+#con I = 1 (fuente de corriente) o pag 60 Pastorino
+E_inc_antenas = -2*pi*freq*mu0/4*special.hankel2(0,kb*absrho)
+
+E_t = E_s+E_inc_antenas
+
+print(E_inc_antenas)
 
 plt.figure()
 extent2=[-.25/2,.25/2,-.25/2,.25/2]
@@ -186,7 +203,7 @@ plt.colorbar()
 plt.figure()
 #extent2=[-0.25/2,0.25/2,-0.25/2,0.25/2]
 #plt.imshow(abs(E_s),cmap = 'pink')#origin='lower')#,extent = extent2)#cmap = 'binary')
-plt.plot(abs(E_s)[:,0],'o-')
+plt.plot(abs(E_t)[:,0],'o-')
 #plt.colorbar()
 
 np.savez('test_cil_M_'+str(M)+'_niter_'+str(niter), Es=E_s)
