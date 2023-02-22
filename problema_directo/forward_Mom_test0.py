@@ -112,8 +112,8 @@ b = (-1j*2*pi/(landa*imp))*np.tile((epsono_r.T.flatten()-1).reshape((M**2,1)),(1
 
 #Using conjugate-gradient method
 np.random.seed(0)
-Jo = np.random.randn(M**2,Ni) # M^2 x Ni
-#Jo = 0.1*np.ones((M**2,Ni))
+#Jo = np.random.randn(M**2,Ni) # M^2 x Ni
+Jo = 0.1*np.ones((M**2,Ni))
 go = AH(A(Jo,Z,M,landa,epsono_r)-b,Z,M,landa,epsono_r)
 po = -go
 
@@ -145,24 +145,35 @@ ZZ = -imp*np.pi*cellrad/2*special.jv(1,k0*cellrad)*special.hankel1(0,k0*R)#Ns x 
 E_s = np.matmul(ZZ,J)# Ns x Ni
 
 
-plt.figure()
+plt.figure(1)
 extent2=[-1,1,-1,1]
 plt.imshow(epsono_r,extent = extent2,origin='lower')#cmap = 'binary')
 #plt.plot(xS,yS,'ow')
 plt.colorbar()
 
-plt.figure()
+plt.figure(2)
 #extent2=[-0.25/2,0.25/2,-0.25/2,0.25/2]
 plt.imshow(abs(E_s),cmap = 'pink')#origin='lower')#,extent = extent2)#cmap = 'binary')
 #plt.plot(xS,yS,'ow')
 plt.colorbar()
-print(E_s[13,4:8])
+
+
+#Comparando con octave
+import scipy.io
+#save -v7 E_s_for_test.mat E_s
+E_s_mat = scipy.io.loadmat('E_s_for_test.mat')
+
+fig3 = plt.figure(3)
+f3 = fig3.add_subplot(211)
+f3.plot(abs(E_s[:,0]),'b')
+f3.plot(abs(E_s_mat['E_s'][:,0]),'b')
+f3.set_xlabel('Number of Rx')
+f3.set_ylabel(r'abs($E_{z}$)')
+f3 = fig3.add_subplot(212)
+f3.plot(N.angle(E_s[:,0]),'b')
+f3.plot(N.angle(E_s_mat['E_s'][:,0]),'b')
+f3.set_xlabel('Number of Rx')
+f3.set_ylabel(r'angle($E_{z}$)')
+
 plt.show()
 
-##%
-##%
-##%nl = 0; % noise level || eg: when noise level is 10%, nl = 0.1.
-##%rand_real = randn(Ns,Ni);
-##%rand_imag = randn(Ns,Ni);
-##%E_Gaussian = 1/sqrt(2) *sqrt(1/Ns/Ni)*norm(E_s,'fro') *nl*(rand_real +1i*rand_imag);
-##%E_s = E_s + E_Gaussian;
