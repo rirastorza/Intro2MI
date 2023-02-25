@@ -91,21 +91,23 @@ E_inc = np.exp(np.matmul((1j*k0*x.T.flatten()).reshape((M**2,1)),(np.cos(theta.T
 
 ##-----------------------------------------------------
 
-M = 40
-
-npzfile = np.load('test_Inv_M_'+str(M)+'.npz')
+#M = 40
+npzfile = np.load('test_Inv_M_'+str(40)+'.npz')
 E_s = npzfile['Es']
-#gamma = sum(E_s.*conj(Gs*Gs'*E_s),1)./sum(abs(Gs*Gs'*E_s).^2,1); % 1 x Ni
-#J= repmat(gamma,M^2,1).*(Gs'*E_s); % M^2 x Ni
-#Et = E_inc + Gd(J,Z,M); % M^2 x 1
 
 gamma = np.sum(E_s*np.conj(np.matmul(np.matmul(Gs,Gs.T),E_s)),axis=0)/np.sum(abs(np.matmul(np.matmul(Gs,Gs.T),E_s))**2,axis=0) # 1 x Ni
-J = np.tile(gamma,(M**2,1))#*np.matmul(Gs.T,E_s)#M^2 x Ni
-print(J.shape)
-#Et = E_inc+Gd(J,Z,M)# M^2 x 1
+J = np.tile(gamma,(M**2,1))*np.matmul(Gs.T,E_s)#M^2 x Ni
+Et = E_inc+Gd(J,Z,M)# M^2 x 1
 
+num = np.sum(J*np.conj(Et),axis=1)
+den = np.sum(np.conj(Et)*Et,axis=1)
 
-#num = sum(J.*conj(Et),2);
-#den = sum(conj(Et).*Et,2);
+chai = (num/den).reshape((M,M))# M x M
 
-#chai = reshape(num./den,M,M); % M x M
+plt.figure(1)
+#extent2=[-0.25/2,0.25/2,-0.25/2,0.25/2]
+plt.imshow(chai.real,cmap = 'pink')#origin='lower')#,extent = extent2)#cmap = 'binary')
+plt.colorbar()
+
+plt.show()
+
