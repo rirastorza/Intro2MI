@@ -27,7 +27,7 @@ phi = 2*pi*np.linspace(0,(Ns-1)/Ns,num=Ns, endpoint=True) # 1 x Ns | angle of re
 R_obs = 3 # radius of the circle formed by receiving antennas
 X = R_obs*np.cos(phi) # 1 x Ns % x coordinates of receiving antennas
 Y = R_obs*np.sin(phi) # 1 x Ns % y coordinates of receiving antennas
-epsono_r_c = 2 # the constant relative permittivity of the object
+epsono_r_c = 1.2 # the constant relative permittivity of the object
 
 
 def A(J,Z,M,landa,epsono_r):
@@ -157,6 +157,7 @@ plt.imshow(abs(E_s),cmap = 'pink')#origin='lower')#,extent = extent2)#cmap = 'bi
 #plt.plot(xS,yS,'ow')
 plt.colorbar()
 
+np.savez('test_Inv_M_'+str(M), Es=E_s)
 
 #Comparando con octave
 import scipy.io
@@ -165,13 +166,13 @@ E_s_mat = scipy.io.loadmat('E_s_for_test.mat')
 
 fig3 = plt.figure(3)
 f3 = fig3.add_subplot(211)
-f3.plot(abs(E_s[:,0]),'b')
-f3.plot(abs(E_s_mat['E_s'][:,0]),'b')
+f3.plot(abs(E_s[:,8]),'b')
+f3.plot(abs(E_s_mat['E_s'][:,8]),'r')
 f3.set_xlabel('Number of Rx')
 f3.set_ylabel(r'abs($E_{z}$)')
 f3 = fig3.add_subplot(212)
-f3.plot(N.angle(E_s[:,0]),'b')
-f3.plot(N.angle(E_s_mat['E_s'][:,0]),'b')
+f3.plot(np.angle(E_s[:,8]),'b')
+f3.plot(np.angle(E_s_mat['E_s'][:,8]),'r')
 f3.set_xlabel('Number of Rx')
 f3.set_ylabel(r'angle($E_{z}$)')
 
