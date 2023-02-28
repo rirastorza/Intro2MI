@@ -60,7 +60,7 @@ ty = d*np.linspace((M-1)/2,-(M-1)/2,num=M,endpoint = True) #((-(M-1)/2):1:((M-1)
 x, y = np.meshgrid(tx, ty)# M x M
 celldia = 2*np.sqrt(d**2/pi) # diameter of cells
 cellrad = celldia/2 #radius of cells
-
+print(cellrad)
 # used to do circular convolution with the eletric diple to generate the
 # scattered E field within DOI (used for calculation of Gd)
 # note that one element in ZZ matrix corresponds to R = 0
@@ -84,20 +84,32 @@ Y_obs = np.tile(Y.T,(M*M,1)).T# Ns x M^2
 
 R = np.sqrt((X_obs-np.tile(x.reshape((M*M,1),order = 'F').T,(Ns,1)))**2+(Y_obs-np.tile(y.reshape((M*M,1),order = 'F').T,(Ns,1)))**2) # Ns x M^2
 
+
+
 Gs = -imp*np.pi*cellrad/2*special.jv(1,k0*cellrad)*special.hankel1(0,k0*R)#Ns x M^2
 
+print()
 #Incident wave (ONDA PLANA)
 E_inc = np.exp(np.matmul((1j*k0*x.T.flatten()).reshape((M**2,1)),(np.cos(theta.T.flatten())).T.reshape((1,Ni)))+np.matmul((1j*k0*y.T.flatten()).reshape((M**2,1)),(np.sin(theta.T.flatten())).T.reshape((1,Ni))))# M^2 x Ni
+
+
 
 ##-----------------------------------------------------
 
 #M = 40
 npzfile = np.load('test_Inv_M_'+str(40)+'.npz')
 E_s = npzfile['Es']
+#print(Gs[:,0])
+#gamma = sum(E_s.*conj(Gs*Gs'*E_s),1)./sum(abs(Gs*Gs'*E_s).^2,1); % 1 x Ni
+gamma = np.sum(E_s*np.conj(np.matmul(np.matmul(Gs,np.conj(Gs).T),E_s)),axis=0)/np.sum(abs(np.matmul(np.matmul(Gs,np.conj(Gs).T),E_s))**2,axis=0) # 1 x Ni
 
-gamma = np.sum(E_s*np.conj(np.matmul(np.matmul(Gs,Gs.T),E_s)),axis=0)/np.sum(abs(np.matmul(np.matmul(Gs,Gs.T),E_s))**2,axis=0) # 1 x Ni
-J = np.tile(gamma,(M**2,1))*np.matmul(Gs.T,E_s)#M^2 x Ni
+
+
+J = np.tile(gamma,(M**2,1))*np.matmul(np.conj(Gs).T,E_s)#M^2 x Ni
 Et = E_inc+Gd(J,Z,M)# M^2 x 1
+
+Gsprint = Gs.T
+print(Gsprint[:,0])
 
 num = np.sum(J*np.conj(Et),axis=1)
 den = np.sum(np.conj(Et)*Et,axis=1)
@@ -106,7 +118,7 @@ chai = (num/den).reshape((M,M))# M x M
 
 plt.figure(1)
 #extent2=[-0.25/2,0.25/2,-0.25/2,0.25/2]
-plt.imshow(chai.real,cmap = 'pink')#origin='lower')#,extent = extent2)#cmap = 'binary')
+plt.imshow(chai.imag,cmap = 'pink',origin='lower')#origin='lower')#,extent = extent2)#cmap = 'binary')
 plt.colorbar()
 
 plt.show()
