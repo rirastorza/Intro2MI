@@ -84,21 +84,17 @@ Y_obs = np.tile(Y.T,(M*M,1)).T# Ns x M^2
 
 R = np.sqrt((X_obs-np.tile(x.reshape((M*M,1),order = 'F').T,(Ns,1)))**2+(Y_obs-np.tile(y.reshape((M*M,1),order = 'F').T,(Ns,1)))**2) # Ns x M^2
 
-
-
 Gs = -imp*np.pi*cellrad/2*special.jv(1,k0*cellrad)*special.hankel1(0,k0*R)#Ns x M^2
 
-print()
 #Incident wave (ONDA PLANA)
 E_inc = np.exp(np.matmul((1j*k0*x.T.flatten()).reshape((M**2,1)),(np.cos(theta.T.flatten())).T.reshape((1,Ni)))+np.matmul((1j*k0*y.T.flatten()).reshape((M**2,1)),(np.sin(theta.T.flatten())).T.reshape((1,Ni))))# M^2 x Ni
-
-
 
 ##-----------------------------------------------------
 
 #M = 40
 npzfile = np.load('test_Inv_M_'+str(40)+'.npz')
 E_s = npzfile['Es']
+
 #print(Gs[:,0])
 #gamma = sum(E_s.*conj(Gs*Gs'*E_s),1)./sum(abs(Gs*Gs'*E_s).^2,1); % 1 x Ni
 gamma = np.sum(E_s*np.conj(np.matmul(np.matmul(Gs,np.conj(Gs).T),E_s)),axis=0)/np.sum(abs(np.matmul(np.matmul(Gs,np.conj(Gs).T),E_s))**2,axis=0) # 1 x Ni
@@ -106,20 +102,52 @@ gamma = np.sum(E_s*np.conj(np.matmul(np.matmul(Gs,np.conj(Gs).T),E_s)),axis=0)/n
 
 
 J = np.tile(gamma,(M**2,1))*np.matmul(np.conj(Gs).T,E_s)#M^2 x Ni
+
+
 Et = E_inc+Gd(J,Z,M)# M^2 x 1
 
-Gsprint = Gs.T
-print(Gsprint[:,0])
+
 
 num = np.sum(J*np.conj(Et),axis=1)
+print(num[1:11])
 den = np.sum(np.conj(Et)*Et,axis=1)
 
-chai = (num/den).reshape((M,M))# M x M
+chai = (num/den).reshape((M,M)).T# M x M
 
 plt.figure(1)
 #extent2=[-0.25/2,0.25/2,-0.25/2,0.25/2]
-plt.imshow(chai.imag,cmap = 'pink',origin='lower')#origin='lower')#,extent = extent2)#cmap = 'binary')
+plt.imshow(chai.imag+1,)#cmap = 'pink')#origin='lower')#,extent = extent2)#cmap = 'binary')
 plt.colorbar()
+
+
+#Comparando con octave
+import scipy.io
+#save -v7 E_s_for_test.mat E_s
+chai_octave = scipy.io.loadmat('chai_for_test.mat')
+
+chai_oct = chai_octave['chai']
+
+plt.figure(2)
+#extent2=[-0.25/2,0.25/2,-0.25/2,0.25/2]
+plt.imshow(chai.imag-chai_oct.imag,)#cmap = 'pink')#origin='lower')#,extent = extent2)#cmap = 'binary')
+plt.colorbar()
+
+
+fig3 = plt.figure(3)
+f3 = fig3.add_subplot(311)
+print(chai_oct.shape,chai.shape)
+f3.plot(chai_oct.imag[:,int(len(chai_oct)/2)],'b')
+f3.plot(chai.imag[:,int(len(chai)/2)],'--r')
+#f3.set_xlabel('Number of Rx')
+#f3.set_ylabel(r'abs($E_{z}$)')
+f3 = fig3.add_subplot(312)
+print(chai_oct.shape,chai.shape)
+f3.plot(chai_oct.imag[int(len(chai_oct)/2),:],'b')
+f3.plot(chai.imag[int(len(chai)/2),:],'--r')
+
+f3 = fig3.add_subplot(313)
+print(chai_oct.shape,chai.shape)
+f3.plot(chai.imag[int(len(chai)/2),:]-chai_oct.imag[int(len(chai_oct)/2),:],'b')
 
 plt.show()
 
