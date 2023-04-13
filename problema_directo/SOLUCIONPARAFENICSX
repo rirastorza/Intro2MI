@@ -1,0 +1,31 @@
+ramiro@labo10:~$ python3
+Python 3.10.6 (main, Mar 10 2023, 10:55:28) [GCC 11.3.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import petsc4py
+>>> from petsc4py import PETSc
+>>> petsc4py.config()
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+AttributeError: module 'petsc4py' has no attribute 'config'
+>>> petsc4py.init()
+>>> petsc4py
+petsc4py
+>>> petsc4py
+petsc4py
+>>> petsc4py.
+petsc4py.PETSc          petsc4py.get_include()  petsc4py.lib            
+petsc4py.get_config()   petsc4py.init(          
+>>> petsc4py.
+petsc4py.PETSc          petsc4py.get_include()  petsc4py.lib            
+petsc4py.get_config()   petsc4py.init(          
+>>> petsc4py.get_config()
+{'PETSC_DIR': '/usr/lib/petscdir/petsc3.15/x86_64-linux-gnu-real', 'PETSC_ARCH': ''}
+>>> 
+ramiro@labo10:~$ cd /usr/lib/petscdir/
+ramiro@labo10:/usr/lib/petscdir$ ls
+3.15  64-3.15  petsc3.15  petsc64-3.15  petsc64-real  petsc-complex  petsc-real
+ramiro@labo10:/usr/lib/petscdir$ cd petsc3.15/
+ramiro@labo10:/usr/lib/petscdir/petsc3.15$ ls
+x86_64-linux-gnu-complex  x86_64-linux-gnu-real
+ramiro@labo10:/usr/lib/petscdir/petsc3.15$ export PETSC_DIR=/usr/lib/petscdir/petsc3.15/x86_64-linux-gnu-complex
+ 
