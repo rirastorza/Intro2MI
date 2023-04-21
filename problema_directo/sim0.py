@@ -21,19 +21,23 @@ def agrupa(datos,nfrec,nant):
     #Med_P7P8  Med_P1P7  Med_P2P7  Med_P3P7  Med_P4P7  Med_P5P7  Med_P6P7
     #Med_P1P8  Med_P2P8  Med_P3P8  Med_P4P8  Med_P5P8  Med_P6P8  Med_P7P8
     """
-    Sinci = np.zeros((len(datos[0,1:nant+1]),len(datos[0,1:nant+1])))
+    Sinci = np.zeros((len(datos[0,1:nant]),len(datos[0,1:nant])))
+    
     nant_anterior = 1
     for i in range(nant-1):
         #print(i,nant-i-1,nant_anterior,nant_anterior+nant-i)
         Sinci[i,:nant-i-1] = datos[nfrec,nant_anterior:nant_anterior+nant-i-1] 
         nant_anterior = nant_anterior+nant-i-1
+    #print(Sinci)
     for i in range(nant-1):
-        rows, cols = np.indices((len(datos[0,1:nant+1]),len(datos[0,1:nant+1])))
-        row_vals = np.diag(np.fliplr(rows), k=-i)
-        col_vals = np.diag(np.fliplr(cols), k=-i)
-        Sinci[row_vals, col_vals]= Sinci[i,0:nant-i]
+        rows, cols = np.indices((len(datos[0,1:nant]),len(datos[0,1:nant])))
+        row_vals = np.diag(np.fliplr(rows), k=-i-1)
+        col_vals = np.diag(np.fliplr(cols), k=-i-1)
+        Sinci[row_vals, col_vals]= Sinci[i,0:nant-2-i]
+        #print(Sinci[i,0:nant-1-i])
+    
+    return Sinci[:,:]
 
-    return Sinci[:,:-1]
 
 
 
@@ -165,12 +169,12 @@ ax1 = fig10.add_subplot(121)
 ax1.plot(Sinc_FINAL[0,:],'ob-',label='Incidente, Tx: 1, f: '+str(f_medida[nfrec]/1e6)+' MHz')
 ax1.plot(Sinc_FINAL[1,:],'xr-',label='Incidente, Tx: 2')
 #ax1.plot(Sinc_FINAL[2,:],'sg-',label='Incidente, Tx: 3')
-#ax1.plot(Sinc_FINAL[3,:],'vy-',label='Incidente, Tx: 4')
+ax1.plot(Sinc_FINAL[3,:],'vy-',label='Incidente, Tx: 4')
 #ax1.plot(Sinc_FINAL[6,:],'^m-',label='Incidente, Tx: 7')
 ax1.plot(S_FINAL[0,:],'ob--',label='Teflon, Tx: 1, f: '+str(f_medida[nfrec]/1e6)+' MHz')
 ax1.plot(S_FINAL[1,:],'xr--',label='Teflon, Tx: 2')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
-#ax1.plot(S_FINAL[2,:],'sg--',label='Teflon, Tx: 3')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
-#ax1.plot(S_FINAL[3,:],'vy--',label='Teflon, Tx: 4')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
+#ax1.plot(S_FINAL[2,:],'sg--',label='Teflon, Tx: 3')#, f: +str(f_medida[nfrec]/1e6)+' MHz')
+ax1.plot(S_FINAL[3,:],'vy--',label='Teflon, Tx: 4')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
 #ax1.plot(S_FINAL[6,:],'^m--',label='Teflon, Tx: 7')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
 ax1.set_ylim([-65, -25])
 ax1.legend(loc="upper right")
