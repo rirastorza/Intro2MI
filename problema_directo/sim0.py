@@ -167,14 +167,14 @@ for tr in range(nant):
 fig10 = plt.figure(10)
 ax1 = fig10.add_subplot(121)
 ax1.plot(Sinc_FINAL[0,:],'ob-',label='Incidente, Tx: 1, f: '+str(f_medida[nfrec]/1e6)+' MHz')
-ax1.plot(Sinc_FINAL[1,:],'xr-',label='Incidente, Tx: 2')
+#ax1.plot(Sinc_FINAL[1,:],'xr-',label='Incidente, Tx: 2')
 #ax1.plot(Sinc_FINAL[2,:],'sg-',label='Incidente, Tx: 3')
-ax1.plot(Sinc_FINAL[3,:],'vy-',label='Incidente, Tx: 4')
+#ax1.plot(Sinc_FINAL[3,:],'vy-',label='Incidente, Tx: 4')
 #ax1.plot(Sinc_FINAL[6,:],'^m-',label='Incidente, Tx: 7')
 ax1.plot(S_FINAL[0,:],'ob--',label='Teflon, Tx: 1, f: '+str(f_medida[nfrec]/1e6)+' MHz')
-ax1.plot(S_FINAL[1,:],'xr--',label='Teflon, Tx: 2')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
+#ax1.plot(S_FINAL[1,:],'xr--',label='Teflon, Tx: 2')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
 #ax1.plot(S_FINAL[2,:],'sg--',label='Teflon, Tx: 3')#, f: +str(f_medida[nfrec]/1e6)+' MHz')
-ax1.plot(S_FINAL[3,:],'vy--',label='Teflon, Tx: 4')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
+#ax1.plot(S_FINAL[3,:],'vy--',label='Teflon, Tx: 4')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
 #ax1.plot(S_FINAL[6,:],'^m--',label='Teflon, Tx: 7')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
 ax1.set_ylim([-65, -25])
 ax1.legend(loc="upper right")
@@ -184,13 +184,60 @@ ax1.set_xticklabels(['12', '13', '14', '15', '16', '17', '18'])
 ax2 = fig10.add_subplot(122)
 
 ax2.plot(10.0*np.log10(EzTrinc[1:]/7.5e4),'o-',label='Incidente, f: '+str(f_medida[nfrec]/1e6)+' MHz')
-ax2.plot(10.0*np.log10(EzTr[1:]/7.5e4),'x--',label='Teflon')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
+ax2.plot(10.0*np.log10(EzTr[1:]/7.5e4),'ob--',label='Teflon')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
 #ax2.set_ylim([-65, -35])
 ax2.legend(loc="upper right")
 ax2.set_xticks([0, 1, 2, 3, 4, 5, 6])
 ax2.set_xticklabels(['12', '13', '14', '15', '16', '17', '18']) 
 ax2.set_ylim([-65, -25])
+#plt.show()
+
+fig10 = plt.figure(11)
+ax1 = fig10.add_subplot(121)
+ax1.plot(Sinc_FINAL[0,:],'ob-',label='Incidente, Tx: 1, f: '+str(f_medida[nfrec]/1e6)+' MHz')
+ax1.plot(Sinc_FINAL[1,:],'xr-',label='Incidente, Tx: 2')
+ax1.plot(Sinc_FINAL[2,:],'sg-',label='Incidente, Tx: 3')
+ax1.plot(Sinc_FINAL[3,:],'vy-',label='Incidente, Tx: 4')
+ax1.plot(Sinc_FINAL[4,:],'^k-',label='Incidente, Tx: 5')
+ax1.plot(Sinc_FINAL[5,:],'.b-',label='Incidente, Tx: 6')
+ax1.plot(Sinc_FINAL[6,:],'+r-',label='Incidente, Tx: 7')
+#ax1.plot(Sinc_FINAL[7,:],'^m-',label='Incidente, Tx: 7')
+ax1.set_ylim([-65, -25])
+ax1.legend(loc="upper right")
+ax1.set_xticks([0, 1, 2, 3, 4, 5, 6])
+ax1.set_xticklabels(['12', '13', '14', '15', '16', '17', '18']) 
+
+ax2 = fig10.add_subplot(122)
+ax2.plot(S_FINAL[0,:],'ob--',label='Teflon, Tx: 1, f: '+str(f_medida[nfrec]/1e6)+' MHz')
+ax2.plot(S_FINAL[1,:],'xr--',label='Teflon, Tx: 2')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
+ax2.plot(S_FINAL[2,:],'sg--',label='Teflon, Tx: 3')#, f: +str(f_medida[nfrec]/1e6)+' MHz')
+ax2.plot(S_FINAL[3,:],'vy--',label='Teflon, Tx: 4')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
+ax2.plot(S_FINAL[4,:],'^k--',label='Teflon, Tx: 5')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
+ax2.plot(S_FINAL[5,:],'.b--',label='Teflon, Tx: 6')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
+ax2.plot(S_FINAL[6,:],'+r--',label='Teflon, Tx: 7')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
+#ax2.plot(S_FINAL[7,:],'^m--',label='Teflon, Tx: 7')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
+#ax2.set_ylim([-65, -35])
+ax2.legend(loc="upper right")
+ax2.set_xticks([0, 1, 2, 3, 4, 5, 6])
+ax2.set_xticklabels(['12', '13', '14', '15', '16', '17', '18']) 
+ax2.set_ylim([-65, -25])
+
+print('Incidente ----------')
+print('Valor medio: ',np.mean(Sinc_FINAL, axis=1))
+print('Desviación estandar: ',np.std(Sinc_FINAL, axis=1))
+
+
+print('Con teflon ----------')
+print('Valor medio: ',np.mean(S_FINAL, axis=1))
+print('Desviación estandar: ',np.std(S_FINAL, axis=1))
+
+print('Apareadas ----------')
+print('Valor medio: ',np.mean(S_FINAL-Sinc_FINAL, axis=1))
+print('Desviación estandar: ',np.std(S_FINAL-Sinc_FINAL, axis=1))
+
+
 plt.show()
+
 
 
 
@@ -309,7 +356,3 @@ plt.show()
 ### 
 
 ### In[ ]:
-
-
-
-
