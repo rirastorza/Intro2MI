@@ -72,10 +72,23 @@ ax1.plot(S_nylon_FINAL[0,:],'ob-.',label='Nylon, Tx: 1, f: '+str(f_medida[nfrec]
 ax1.plot(S_nylon_FINAL[1,:],'xr--',label='Nylon, Tx: 2')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
 ax1.plot(S_nylon_FINAL[2,:],'sg--',label='Nylon, Tx: 3')#, f: +str(f_medida[nfrec]/1e6)+' MHz')
 ax1.plot(S_nylon_FINAL[3,:],'vy--',label='Nylon, Tx: 4')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
+ax1.plot(S_nylon_FINAL[4,:],'+y--',label='Nylon, Tx: 5')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
+ax1.plot(S_nylon_FINAL[5,:],'sy--',label='Nylon, Tx: 5')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
 ax1.plot(S_nylon_FINAL[6,:],'^m--',label='Nylon, Tx: 7')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
 ax1.set_ylim([-65, -25])
 ax1.legend(loc="upper right")
 ax1.set_xticks([0, 1, 2, 3, 4, 5, 6])
 ax1.set_xticklabels(['12', '13', '14', '15', '16', '17', '18']) 
+
+#print(nylon.shape)
+fig11 = plt.figure(11)
+ax2 = fig11.add_subplot(121)
+ax2.semilogx(datos_cilindronylon[:,0],datos_cilindronylon[:,1:7])
+#ax2.semilogx(datos_cilindronylon[:,0],datos_cilindronylon[:,2])
+#ax2.semilogx(datos_cilindronylon[:,0],datos_cilindronylon[:,3])
+#ax2.semilogx(datos_cilindronylon[:,0],datos_cilindronylon[:,4])
+ax2.set_ylim([-65, -25])
+#ax2.legend(loc="upper right")
+
 
 plt.show()
