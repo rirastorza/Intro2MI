@@ -48,7 +48,7 @@ datos = np.loadtxt(incidente,skiprows=1)
 f_medida = 1e6*datos[:,0]
 datos_canonico = np.loadtxt(canonico,skiprows=1,delimiter=',')
 
-nfrec = 64
+nfrec = 125
 nant = 8
 Sinc_FINAL = agrupa(datos,nfrec,nant)
 S_FINAL = agrupa(datos_canonico,nfrec,nant)
@@ -140,8 +140,30 @@ tx = 0
 Ezfdtd,eps_data = RunMeep(cilindro1,ACOPLANTE_parameters,TRANSMISOR_parameters, tx, box,RES = 5,calibration = False)
 Ezfdtdinc,eps_data_no = RunMeep(cilindro1,ACOPLANTE_parameters,TRANSMISOR_parameters, tx, box,RES = 5,calibration = True)
 
+r = 25.0e-3/2.0
+Xc = 0.0
+Yc = 0.0
+
+print('Xc:', Xc,'Yc:', Yc,'r:',r)
+
+#Dibujo la geometría generada
+cilindro = plt.Circle((Xc,Yc),r,fill = False)
+
+#Cargo los parámetros del cilindro
+cilindro2 = SCATTERER_parameters()
+cilindro2.epsr = 49.69 #permitividad del glicerol 60%
+cilindro2.sigma = 1.2 #conductividad del glicerol 60%
+cilindro2.f = TRANSMISOR_parameters.f #frecuencia 1.0 GHz (por defecto).
+cilindro2.radio = 3.34e-2 #radio del cilindro de glicerol 60%
+cilindro2.xc = Xc
+cilindro2.yc = Yc
+EzfdtdGlic,eps_dataglic = RunMeep(cilindro2,ACOPLANTE_parameters,TRANSMISOR_parameters, tx, box,RES = 5,calibration = False)
+
+
 EzTr = np.zeros(nant)
 EzTrinc = np.zeros(nant)
+EzTrglic = np.zeros(nant)
+
 print(len(xantenas))
 
 plt.figure()
@@ -156,9 +178,11 @@ for tr in range(nant):
     yRint = int(resolucion*(-yantenas[tr])/a)+int(n/2)
     EzTr[tr] = abs(Ezfdtd)[xRint,yRint]
     EzTrinc[tr] = abs(Ezfdtdinc)[xRint,yRint]
+    EzTrglic[tr] = abs(EzfdtdGlic)[xRint,yRint]
     print('Einc :',EzTrinc[tr],' tr:',tr)
     plt.plot(xRint,yRint,'ow')
     plt.text(xRint+2,yRint+2, str(tr), fontsize=12)
+    
 
 
 #plt.show()
@@ -183,8 +207,9 @@ ax1.set_xticklabels(['12', '13', '14', '15', '16', '17', '18'])
 
 ax2 = fig10.add_subplot(122)
 
-ax2.plot(10.0*np.log10(EzTrinc[1:]/7.5e4),'o-',label='Incidente, f: '+str(f_medida[nfrec]/1e6)+' MHz')
+ax2.plot(10.0*np.log10(EzTrinc[1:]/7.5e4),'ok-',label='Incidente, f: '+str(f_medida[nfrec]/1e6)+' MHz')
 ax2.plot(10.0*np.log10(EzTr[1:]/7.5e4),'ob--',label='Teflon')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
+ax2.plot(10.0*np.log10(EzTrglic[1:]/7.5e4),'or--',label='Glicerol')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
 #ax2.set_ylim([-65, -35])
 ax2.legend(loc="upper right")
 ax2.set_xticks([0, 1, 2, 3, 4, 5, 6])
@@ -236,6 +261,15 @@ print('Valor medio: ',np.mean(S_FINAL-Sinc_FINAL, axis=1))
 print('Desviación estandar: ',np.std(S_FINAL-Sinc_FINAL, axis=1))
 
 
+figure, axes = plt.subplots()
+#axes.plot(xantenas,yantenas,'ok')
+axes.plot(10.0*np.log10(EzTrinc[1:]/7.5e4),'ok-',label='Incidente, f: '+str(f_medida[nfrec]/1e6)+' MHz')
+axes.plot(10.0*np.log10(EzTr[1:]/7.5e4),'ob--',label='Teflon')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
+axes.plot(10.0*np.log10(EzTrglic[1:]/7.5e4),'or--',label='Glicerol')#, f: '+str(f_medida[nfrec]/1e6)+' MHz')
+
+axes.legend(loc="upper right")
+axes.set_xticks([0, 1, 2, 3, 4, 5, 6])
+axes.set_xticklabels(['12', '13', '14', '15', '16', '17', '18'])
 plt.show()
 
 
