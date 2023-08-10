@@ -27,10 +27,10 @@ phi = 2*pi*np.linspace(0,(Ns-1)/Ns,num=Ns, endpoint=True) # 1 x Ns | angle of re
 R_obs = 3 # radius of the circle formed by receiving antennas
 X = R_obs*np.cos(phi) # 1 x Ns % x coordinates of receiving antennas
 Y = R_obs*np.sin(phi) # 1 x Ns % y coordinates of receiving antennas
-epsono_r_c = 1.2 # the constant relative permittivity of the object
+epsono_r_c = 1.8 # the constant relative permittivity of the object
 
 #Positions of the cells 
-M = 20 # the square containing the object has a dimension of MxM
+M = 40 # the square containing the object has a dimension of MxM
 d = size_DOI/M #the nearest distance of two cell centers
 print('landa: ',landa/(epsono_r_c)**.5)
 print('d: ',d)
@@ -43,7 +43,7 @@ cellrad = celldia/2 #radius of cells
 
 #Relative permittivity of each cell
 epsono_r = np.ones((M,M))
-epsono_r[(x)**2+(y)**2 <= 1.0**2] = epsono_r_c
+epsono_r[(x)**2+(y)**2 <= 0.8**2] = epsono_r_c
 
 print(x)
 print(epsono_r)
@@ -111,10 +111,10 @@ tx = 0 # Fuente analizada
 #Medio acoplante---------------------------------------------------------------
 epsc = 1
 # Medio dispersor (cilindro)---------------------------------------------------
-r = 1.0 #10.0e-3/2 #radio del cilindro
+r = 0.8 #10.0e-3/2 #radio del cilindro
 Xc = 0    #posición del centro en x
 Yc = 0   #posición del centro en y
-epsr = 1.2
+epsr = 1.8
 resolucion = 5 #resolución FDTD
 
 #%%

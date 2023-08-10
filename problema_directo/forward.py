@@ -72,6 +72,14 @@ class TRANSMISOR_parameters:
     amp = 1000.0 #Amplitud de la fuente
     #k = 2*pi*f/c
 
+class RECEPTOR_parameters:
+    f = 1.0e9  #frecuencia 1 GHz (por defecto).
+    rhoS = 0.075 #*c/f #radio de transmisores
+    S = 16. #cantidad de transmisores (fuentes)
+    amp = 1000.0 #Amplitud de la fuente
+    #k = 2*pi*f/c
+
+
 #
 # - Función para cambio de coordenadas cartesianas a polares
 #
@@ -217,9 +225,9 @@ def EZ_CILINDER_LINESOURCE_MATRIZ(epsilon,cilindro, acoplante,trans,Tx,deltaX):
 # - Función numérica con FDTD utilizando software meep
 #
 
-def RunMeep(cilindro, acoplante,trans, Tx,caja,RES = 5,calibration = False):
+def RunMeep(cilindro, acoplante,trans, Tx,caja,RES = 5,calibration = False, unit=0.01):
     
-    a = 0.005 #Meep unit
+    a = unit #Meep unit
     res = RES # pixels/a
     dpml = 1 
     

@@ -92,9 +92,9 @@ V = dolfinx.fem.FunctionSpace(mesh, element)
 #Fuente de corriente en la antena transmisora.
 #https://fenicsproject.discourse.group/t/dirac-delta-distribution-dolfinx/7532/3
 cte = 0.05
-xt = 5.0
+xt = 6.0
 yt = 0.0
-J_a = -1/(2*np.abs(cte*cte)*np.sqrt(pi))*ufl.exp((-((x[0]-xt)/cte)**2-((x[1]-yt)/cte)**2)/2)
+J_a = -2e3/(2*np.abs(cte*cte)*np.sqrt(pi))*ufl.exp((-((x[0]-xt)/cte)**2-((x[1]-yt)/cte)**2)/2)
 
 #J = dolfinx.fem.Function(V)
 #dofs = dolfinx.fem.locate_dofs_geometrical(V,  lambda x: np.isclose(x.T, [0.075, 0.0, 0.0]).all(axis=1))
@@ -116,20 +116,74 @@ uh.name = "u"
 from dolfinx.io import XDMFFile #, VTXWriter
 u_abs = dolfinx.fem.Function(V, dtype=np.float64)
 u_abs.x.array[:] = np.abs(uh.x.array)
+print(type(uh))
+#np.savez('Ez_salidas.npz',ezr = uh.x.array.real,ezi = uh.x.array.imag)
 
 # XDMF writes data to mesh nodes
 with XDMFFile(MPI.COMM_WORLD, "out.xdmf", "w") as file:
     file.write_mesh(mesh)
     file.write_function(u_abs)
 
-with XDMFFile(MPI.COMM_WORLD, "wavenumber.xdmf", "w") as file:
-    file.write_mesh(mesh)
-    file.write_function(k)
+
+nant_r = 16 #antenas receptoras
+rant_r = 3 #radio de antenas receptoras[m]
+#Coordenadas antenas receptoras
+angulo_r = np.linspace(0.0, 2.0*pi-2*pi/nant_r, nant_r)
+print(len(angulo_r))
+xantenas_r= (rant_r)*np.cos(angulo_r)
+yantenas_r = (rant_r)*np.sin(angulo_r)
+
+
+
+#Evaluar puntos
+points = np.zeros((3, len(xantenas_r)))
+points[0] = xantenas_r
+points[1] = yantenas_r
+u_values = []
+
+from dolfinx import geometry
+bb_tree = geometry.BoundingBoxTree(mesh, mesh.topology.dim)
+
+cells = []
+points_on_proc = []
+# Find cells whose bounding-box collide with the the points
+cell_candidates = geometry.compute_collisions(bb_tree, points.T)
+# Choose one of the cells that contains the point
+colliding_cells = geometry.compute_colliding_cells(mesh, cell_candidates, points.T)
+for i, point in enumerate(points.T):
+    if len(colliding_cells.links(i))>0:
+        points_on_proc.append(point)
+        cells.append(colliding_cells.links(i)[0])
+
+points_on_proc = np.array(points_on_proc, dtype=np.float64)
+u_values = uh.eval(points_on_proc, cells)
+
+print(u_values,type(u_values))
+
+import matplotlib.pyplot as plt
+fig, (axs1,axs2) = plt.subplots(2,1,figsize=(16, 10))
+N=9
+cmap = plt.get_cmap('Set2', N)
+
+
+
+
+axs1.plot(abs(u_values),'^-', label='módulo FEM',markersize=10,)#color =cmap(0)) 
+axs2.plot(-np.angle(u_values),'v-', label='fase FEM',markersize=10,)#color=cmap(2)) 
+
+np.savez('Ez_fem',absEz = abs(u_values),angleEz = -np.angle(u_values))
+
+#for n in range(0,len(xantenas_r)):
+    #print(uh(xantenas_r[n],yantenas_r[n]))
+
+#with XDMFFile(MPI.COMM_WORLD, "wavenumber.xdmf", "w") as file:
+    #file.write_mesh(mesh)
+    #file.write_function(k)
 
 ##from matplotlib import pyplot as plt
 
 ##plt.figure(1)
 ##extent2=[-0.25/2,0.25/2,-0.25/2,0.25/2]
 ##plt.imshow(u_abs.x.array[:].transpose(),extent = extent2)
-##plt.show()
+plt.show()
 
