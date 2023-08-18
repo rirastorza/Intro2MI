@@ -465,10 +465,87 @@ def RunMeep2(archivoout, cilindro1,cilindro2, acoplante,trans, Tx,caja,RES = 5,c
 #
 
 #
-# - Función numérica con MoM discretizando según 
+# - Función numérica con MoM discretizando según Richmond
 #
 
-def RunMoM(cilindro, acoplante,trans,caja,RES = 150):
+def RunMoM(cilindro, acoplante,trans,receptor,size_doi = 2,Tx = 1 ,RES = 40):
+    '''
+    Función que resuelve el problema directo por el método de los momentos.
+    Se programó según el trabajo de Richmond.
+    '''
+    freq = trans.f #freq = 400e6
+    landa = c/freq # the wavelength in the air
+    k0 = 2*pi/landa # the wave number in the air
+    imp = 120*pi # impedance of air
+    size_DOI = size_doi # size of DOI
+    
+    Ni = trans.S # number of incidence
+    Ns = receptor.S # number of receiving antennas
+    theta = N.linspace(0,2*pi-2*pi/Ni, num=Ni, endpoint=True) # angle of incidence
+    phi = 2*pi*N.linspace(0,(Ns-1)/Ns,num=Ns, endpoint=True) # 1 x Ns | angle of receiving antennas
+    R_obs = receptor.rhoS # radius of the circle formed by receiving antennas
+    X = R_obs*N.cos(phi) # 1 x Ns % x coordinates of receiving antennas
+    Y = R_obs*N.sin(phi) # 1 x Ns % y coordinates of receiving antennas
+    R_trans = trans.rhoS # radius of the circle formed by receiving antennas
+    XT = R_trans*N.cos(phi)[Tx-1] # 1 x Ns % x coordinates of receiving antennas
+    YT = R_trans*N.sin(phi)[Tx-1] # 1 x Ns % y coordinates of receiving antennas
+    epsono_r_c = cilindro.epsr # the constant relative permittivity of the object
+
+    #Positions of the cells 
+    M = RES # the square containing the object has a dimension of MxM
+    d = size_DOI/M #the nearest distance of two cell centers
+    #print('landa: ',landa/(epsono_r_c)**.5)
+    #print('d: ',d)
+
+    tx = d*N.linspace(-(M-1)/2,(M-1)/2,num=M,endpoint = True) #((-(M-1)/2):1:((M-1)/2))*d # 1 x M
+    ty = d*N.linspace((M-1)/2,-(M-1)/2,num=M,endpoint = True) #((-(M-1)/2):1:((M-1)/2))*d # 1 x M
+    x, y = N.meshgrid(tx, ty)# M x M
+    celldia = 2*N.sqrt(d**2/pi) # diameter of cells
+    cellrad = celldia/2 #radius of cells
+
+    #Relative permittivity of each cell
+    epsono_r = N.ones((M,M))
+    epsono_r[(x-cilindro.xc)**2+(y-cilindro.yc)**2 <= cilindro.radio**2] = epsono_r_c
+
+    #print(x)
+    #print(epsono_r)
+    cte = (1j/2)*(pi*k0*cellrad*special.hankel2(1,k0*cellrad)-2j)#cuando estoy en la misma celda
+
+    matrizCtes = N.zeros((M**2,M**2),dtype = complex)
+
+    Xv = x.reshape((M**2,1))
+    Yv = y.reshape((M**2,1))
+    ji = epsono_r.reshape((M**2,1))-1
+    for mm in range(len(matrizCtes)):
+        for nn in range(len(matrizCtes)):
+            if mm == nn:
+                matrizCtes[mm,nn] = (ji[nn])*cte
+            else:
+                R = N.sqrt((Xv[mm]-Xv[nn])**2+(Yv[mm]-Yv[nn])**2)
+                matrizCtes[mm,nn] = (ji[nn])*(1j/2)*pi*k0*cellrad*special.jv(1,k0*cellrad)*special.hankel2(0,k0*R)
+
+    N.set_printoptions(precision=3)
+
+    D = N.eye(M**2,M**2)
+
+    A = D+matrizCtes
+
+    #Incident wave (linea de corriente)
+    absrho = ((x.T.flatten()-XT)**2+(y.T.flatten()-YT)**2)**0.5
+    E_inc = (-2*pi*freq*mu0/4*special.hankel2(0,k0*absrho)).T.reshape((M**2,1))
+    #print(E_inc.shape)
+    b = E_inc.reshape((M**2,1))
+    #Solución de la ecuación lineal
+    Et = N.linalg.solve(A, b)
+    
+    return Et.reshape((M,M)), epsono_r
+
+
+#
+# - Función numérica con MoM discretizando según Chen
+#
+
+def RunMoM_2(cilindro, acoplante,trans,caja,RES = 150):
     #Función que implementa el Método de los Momentos
     #DOCUMENTAR!!!
     
