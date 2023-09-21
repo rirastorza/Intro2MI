@@ -381,82 +381,63 @@ def RunMeep_flux(cilindro, acoplante,trans, Tx,Tr,caja,RES = 5,calibration = Fal
     return ez_data,eps_data,freqs,near_flux_transmisor,near_flux_receptor
 
 
-def RunMeep2(archivoout, cilindro1,cilindro2, acoplante,trans, Tx,caja,RES = 5,calibration = False):
-
-
-    res = RES # pixels/a
+def RunMeep2(cilindro1, cilindro2, acoplante, trans, Tx, caja, RES=5, calibration=False, unit=0.005):
+    
+    a = unit #Meep unit
+    res = RES  # pixels/a
     dpml = 1
 
-    sx = caja[0]/a
-    sy = caja[1]/a
+    sx = caja[0] / a
+    sy = caja[1] / a
 
-    print('sxa: ',sx,'sxa: ',sy)
+    print('sxa: ', sx, 'sxa: ', sy)
 
-    #rhoS = tran1.5*c/trans.f
+    # rhoS = tran1.5*c/trans.f
 
-    fcen = trans.f*(a/c)  # pulse center frequency
-    sigmaBackgroundMeep = acoplante.sigma*a/(c*acoplante.epsr*eps0)
-    sigmaCylinderMeep = cilindro1.sigma*a/(c*cilindro1.epsr*eps0)
-    sigmaCylinderMeep2 = cilindro2.sigma*a/(c*cilindro2.epsr*eps0)
+    fcen = trans.f * (a / c)  # pulse center frequency
+    sigmaBackgroundMeep = acoplante.sigma * a / (c * acoplante.epsr * eps0)
+    sigmaCylinderMeep = cilindro1.sigma * a / (c * cilindro1.epsr * eps0)
+    sigmaCylinderMeep2 = cilindro2.sigma * a / (c * cilindro2.epsr * eps0)
 
-    materialBackground = mp.Medium(epsilon=acoplante.epsr, D_conductivity= sigmaBackgroundMeep) # Background dielectric properties at operation frequency
-    materialCilindro = mp.Medium(epsilon= cilindro1.epsr, D_conductivity= sigmaCylinderMeep) # Cylinder dielectric properties at operation frequency
-    materialCilindro2 = mp.Medium(epsilon= cilindro2.epsr, D_conductivity= sigmaCylinderMeep2) # Cylinder dielectric properties at operation frequency
+    materialBackground = mp.Medium(epsilon=acoplante.epsr,
+                                   D_conductivity=sigmaBackgroundMeep)  # Background dielectric properties at operation frequency
+    materialCilindro = mp.Medium(epsilon=cilindro1.epsr,
+                                 D_conductivity=sigmaCylinderMeep)  # Cylinder dielectric properties at operation frequency
+    materialCilindro2 = mp.Medium(epsilon=cilindro2.epsr,
+                                  D_conductivity=sigmaCylinderMeep2)  # Cylinder dielectric properties at operation frequency
 
     default_material = materialBackground
 
-    #Simulation box and elements
-    cell = mp.Vector3(sx,sy,0)
+    # Simulation box and elements
+    cell = mp.Vector3(sx, sy, 0)
     pml_layers = [mp.PML(dpml)]
 
-    if calibration:#el cilindro1 del centro es Background
-        geometry = [mp.Cylinder(material=materialBackground, radius=cilindro1.radio/a, height=mp.inf, center=mp.Vector3(cilindro1.xc/a,cilindro1.yc/a,0))]
-    else:#el cilindro1 del centro es la muestra
-        geometry = [mp.Cylinder(material=materialCilindro, radius=cilindro1.radio/a, height=mp.inf, center=mp.Vector3(cilindro1.xc/a,cilindro1.yc/a,0)),
-                    mp.Cylinder(material=materialCilindro2, radius=cilindro2.radio/a, height=mp.inf, center=mp.Vector3(cilindro2.xc/a,cilindro2.yc/a,0))]
+    if calibration:  # el cilindro1 del centro es Background
+        geometry = [mp.Cylinder(material=materialBackground, radius=cilindro1.radio / a, height=mp.inf,
+                                center=mp.Vector3(cilindro1.xc / a, cilindro1.yc / a, 0))]
+    else:  # el cilindro1 del centro es la muestra
+        geometry = [mp.Cylinder(material=materialCilindro, radius=cilindro1.radio / a, height=mp.inf,
+                                center=mp.Vector3(cilindro1.xc / a, cilindro1.yc / a, 0)),
+                    mp.Cylinder(material=materialCilindro2, radius=cilindro2.radio / a, height=mp.inf,
+                                center=mp.Vector3(cilindro2.xc / a, cilindro2.yc / a, 0))]
 
+    xt = (trans.rhoS) * N.cos(Tx * 2 * pi / trans.S)  # Coordenada x antena transmisora
+    yt = (trans.rhoS) * N.sin(Tx * 2 * pi / trans.S)  # Coordenada y antena transmisora
 
-    xt = (trans.rhoS)*N.cos(Tx*2*pi/trans.S) #Coordenada x antena transmisora
-    yt = (trans.rhoS)*N.sin(Tx*2*pi/trans.S) #Coordenada y antena transmisora
+    sources = [mp.Source(mp.ContinuousSource(frequency=fcen), component=mp.Ez, center=mp.Vector3(xt / a, yt / a, 0.0),
+                         amplitude=trans.amp, size=mp.Vector3(0.0, 0.0, mp.inf))]
 
-    #amp = 1000
-    sources = [mp.Source(mp.ContinuousSource(frequency=fcen),component = mp.Ez,center = mp.Vector3(xt/a,yt/a,0.0), amplitude = trans.amp,size=mp.Vector3(0.0,0.0,mp.inf))]
+    sim = mp.Simulation(cell_size=cell, sources=sources, resolution=res, default_material=default_material,
+                        eps_averaging=False, geometry=geometry, boundary_layers=pml_layers, force_complex_fields=True)
 
-    sim = mp.Simulation(cell_size=cell, sources=sources, resolution=res, default_material=default_material, eps_averaging=False, geometry=geometry,boundary_layers=pml_layers,force_complex_fields = True)
+    nt = 600
 
-    nt = 2000
-
-    if calibration:#el cilindro1 del centro es agua
-        #sim.run(mp.at_beginning(mp.output_epsilon),
-            #mp.in_volume(mp.Volume(center=mp.Vector3(0,0,0), size=mp.Vector3(sx,sy,0)), mp.to_appended(problemname+"ez", mp.at_every(1.0, mp.output_efield_z))),
-            #until=nt)
-
-        sim.run(until=nt)
-    else:
-        #sim.run(mp.at_beginning(mp.output_epsilon),
-            #mp.in_volume(mp.Volume(center=mp.Vector3(0,0,0), size=mp.Vector3(sx,sy,0)), mp.to_appended(problemname+"ez", mp.at_every(1.0, mp.output_efield_z))),
-            #until=nt)
-        sim.run(until=nt)
+    sim.run(until=nt)
 
     eps_data = sim.get_array(center=mp.Vector3(), size=cell, component=mp.Dielectric)
-
-
     ez_data = sim.get_array(center=mp.Vector3(), size=cell, component=mp.Ez)
 
-    #plt.figure()
-    #plt.plot(abs(ez_data).transpose()[int(len(ez_data)/2),:],'.')# interpolation='spline36', cmap='binary')
-    #plt.axis('off')
-    #plt.show()
-
-
-    #plt.figure()
-    #plt.imshow(eps_data.transpose(), interpolation='spline36', cmap='binary')
-    #plt.imshow(abs(ez_data).transpose(), interpolation='spline36', cmap='RdBu', alpha=0.9)
-    #plt.axis('off')
-    #plt.show()
-    #ezt = sim.get_array(center=mp.Vector3(xct1, yct1,0), size=mp.Vector3(0,0,0), component=mp.Ez)
-    #ezr = sim.get_array(center=mp.Vector3(xcr2, ycr2,0), size=mp.Vector3(0,0,0), component=mp.Ez)
-    return ez_data,eps_data
+    return ez_data, eps_data
 
 
 
