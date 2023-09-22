@@ -45,6 +45,15 @@ a = 0.005 #Meep unit
 # - Clases de parámetros del dispersor, acoplante, y transmisor. 
 #
 class SCATTERER_parameters:
+    """
+    Clase que define los parámetros de un dispersor cilíndrico para simulaciones electromagnéticas.
+    
+    Esta clase define los parámetros y propiedades de un dispersor cilíndrico que se utilizarán
+    en simulaciones electromagnéticas. Los parámetros como la permitividad relativa, conductividad,
+    frecuencia, radio y coordenadas del cilindro se pueden ajustar. Además, se puede especificar
+    una malla preexistente para ser utilizada en las simulaciones. La existencia de la malla se
+    verifica al instanciar la clase y se almacena en la bandera booleana `thereIsMesh`.
+    """
     #Cilindro
     epsr = 1.2 #permitividad relativa
     sigma = 0.0 #conductividad
@@ -55,6 +64,19 @@ class SCATTERER_parameters:
     xc = 0.0 # 0.75*c/f #radio del cilindro
     yc = 0.0 # 0.75*c/f #radio del cilindro
     #k = 2*pi*f*((epsrC*mur)**0.5)/c
+    
+    mesh = 'valor.msh' #valor por default para la variable mesh (malla) 
+    thereIsMesh = True #bandera booleana para comprobar si existe la malla
+
+    def __init__(self, mesh='valor.msh'):
+        self.mesh = mesh
+        try:
+            with open(mesh, "r") as archivo: #con open() compruebo si en la ruta de la malla pasada 
+                contenido = archivo.read()
+
+        except FileNotFoundError:
+            SCATTERER_parameters.thereIsMesh = False
+
 
 
 class ACOPLANTE_parameters:
@@ -671,6 +693,182 @@ def AH(J,Z,M,landa,epsono_r,epsrCb):
     return opa
 
 
+def runFem(cilindro, acoplante, trans, receptor, tx, caja):
+    """
+    Esta función realiza simulaciones de elementos finitos,
+    utilizando las bibliotecas DolfinX y Pygmsh para resolver ecuaciones de dispersión
+    electromagnética en un cilindro. Puede trabajar con una malla preexistente o
+    generar una malla circular si no se proporciona una malla en el objeto `cilindro`.
+
+    Parámetros:
+    cilindro (objeto): Objeto que describe el cilindro dispersor. Debe contener la
+                      información necesaria sobre la geometría del cilindro.
+    acoplante (objeto): Objeto que describe el acoplante utilizado en la simulación.
+    trans (objeto): Objeto que describe la antena transmisora utilizada en la simulación.
+
+    Retorna:
+    epsilonC (dolfinx.fem.Function): Una función que representa la permitividad
+                                    del medio dispersor en la malla simulada.
+                                    Si se proporciona una malla preexistente, esta
+                                    función contiene la distribución de permitividad
+                                    en la malla. Si se genera una malla circular,
+                                    la función contiene la distribución de permitividad
+                                    en esa malla generada.
+    """
+    import numpy as np
+    from mpi4py import MPI
+    import dolfinx
+    import ufl
+    import sys
+    from petsc4py import PETSc
+    from scipy import constants as S
+
+    epsilonC = None
+
+
+    pi = S.pi
+    mu0 = S.mu_0
+    epsilon0 = S.epsilon_0
+    if not np.issubdtype(PETSc.ScalarType, np.complexfloating):
+        print("This tutorial requires complex number support")
+        sys.exit(0)
+    else:
+        print(f"Using {PETSc.ScalarType}.")
+
+    freq = 0.4e9
+    sigmadc = 0.0
+    epsb = 1.0#aire
+    epsc = 1.2#cilindro
+    sx = caja[0]
+    sy = caja[1]
+    # ## Defining model parameters
+    # wavenumber in coupling media
+    kb = 2 * pi * freq * (mu0*epsilon0*epsb)**0.5# 2*pi*f*(mu0*epsilon0*(epsr-jsigma/(2pi*f*eps0)))**0.5
+    #wavenumber in cylinder
+    kc = 2 * pi * freq * (mu0*epsilon0*epsc)**0.5
+    # Corresponding wavelength
+    lmbda = 2 * pi / kb.real
+    # Polynomial degree
+    degree = 6
+    # Mesh order
+    mesh_order = 2
+
+    if cilindro.thereIsMesh:
+        #cargo la malla generada con Gmsh
+        mesh, cell_tags, facet_tags = gmshio.read_from_msh(cilindro.mesh, MPI.COMM_WORLD, 0, gdim=mesh_order)
+    else:
+        import pygmsh
+
+        sx = caja[0]
+        sy = caja[1]
+        resolution = 0.2
+        xc = cilindro.xc
+        yc = cilindro.yc
+
+        # Channel parameters
+        L = sx #long caja sx
+        H = sy #altura (sy)
+        c = [xc, yc, 0] #centro del cilindro
+        r = cilindro.radio #radio del cilindro
+
+        # Initialize empty geometry using the build in kernel in GMSH
+        geometry = pygmsh.geo.Geometry()
+
+        # Fetch model we would like to add data to
+        model = geometry.__enter__()
+        # Add circle
+        circle = model.add_circle(c, r, mesh_size=resolution)
+        # Add points
+        points = [model.add_point((-L/2, -H/2, 0), mesh_size=resolution),
+                  model.add_point((L/2, -H/2, 0), mesh_size=resolution),
+                  model.add_point((L/2, H/2, 0), mesh_size=resolution),
+                  model.add_point((-L/2, H/2, 0), mesh_size=resolution)]
+
+        # Add lines between all points creating the rectangle
+        channel_lines = [model.add_line(points[i], points[i+1])
+                         for i in range(-1, len(points)-1)]
+        # Create a line loop and plane surface for meshing
+        channel_loop = model.add_curve_loop(channel_lines)
+        plane_surface = model.add_plane_surface(
+            channel_loop, holes=[circle.curve_loop])
+        plane_surface2 = model.add_plane_surface(
+            circle.curve_loop)
+        # Call gmsh kernel before add physical entities
+        model.synchronize()
+        volume_marker = 6
+        model.add_physical([plane_surface], '1')
+        model.add_physical([plane_surface2], '2')
+        model.add_physical([channel_lines[0], channel_lines[1], channel_lines[2], channel_lines[3]], '10')
+
+        geometry.generate_mesh(dim=2)
+        gmsh.write("mesh.msh")
+        gmsh.clear()
+        geometry.__exit__()
+        #cargo la malla generada con pygmsh
+        mesh, cell_tags, facet_tags = gmshio.read_from_msh("mesh.msh", MPI.COMM_WORLD, 0, gdim=mesh_order)
+
+    W = dolfinx.fem.FunctionSpace(mesh, ("DG", 0))
+    k = dolfinx.fem.Function(W)
+    k.x.array[:] = kb
+    k.x.array[cell_tags.find(2)] = kc
+
+    epsilonC = dolfinx.fem.Function(W)
+    epsilonC.x.array[:] = epsb
+    epsilonC.x.array[cell_tags.find(2)] = epsc
+
+
+    #import matplotlib.pyplot as plt
+    #from dolfinx.plot import create_vtk_mesh
+
+    n = ufl.FacetNormal(mesh)
+    dx = ufl.Measure("dx", domain=mesh, subdomain_data=cell_tags)
+    dS = ufl.Measure("ds", domain=mesh, subdomain_data=facet_tags)
+    x = ufl.SpatialCoordinate(mesh)
+    # ## Variational form
+    element = ufl.FiniteElement("Lagrange", mesh.ufl_cell(), degree)
+    V = dolfinx.fem.FunctionSpace(mesh, element)
+
+    #Fuente de corriente en la antena transmisora.
+    #https://fenicsproject.discourse.group/t/dirac-delta-distribution-dolfinx/7532/3
+    cte = 0.05
+    xt = 5.0
+    yt = 0.0
+    J_a = -1/(2*np.abs(cte*cte)*np.sqrt(pi))*ufl.exp((-((x[0]-xt)/cte)**2-((x[1]-yt)/cte)**2)/2)
+
+    #J = dolfinx.fem.Function(V)
+    #dofs = dolfinx.fem.locate_dofs_geometrical(V,  lambda x: np.isclose(x.T, [0.075, 0.0, 0.0]).all(axis=1))
+    #J.x.array[dofs] = -1.0
+
+    u = ufl.TrialFunction(V)
+    v = ufl.TestFunction(V)
+
+    a = - ufl.inner(ufl.grad(u), ufl.grad(v)) * ufl.dx     + k**2 * ufl.inner(u, v) * ufl.dx     - 1j * k * ufl.inner(u, v) * dS
+    L = ufl.inner(J_a, v) * ufl.dx
+
+    # Linear solver
+    opt = {"ksp_type": "preonly", "pc_type": "lu"}
+    problem = dolfinx.fem.petsc.LinearProblem(a, L, petsc_options=opt)
+    uh = problem.solve()
+    uh.name = "u"
+
+    ## Postprocessing
+    from dolfinx.io import XDMFFile #, VTXWriter
+    u_abs = dolfinx.fem.Function(V, dtype=np.float64)
+    u_abs.x.array[:] = np.abs(uh.x.array)
+
+    # XDMF writes data to mesh nodes
+    with XDMFFile(MPI.COMM_WORLD, "out.xdmf", "w") as file:
+        file.write_mesh(mesh)
+        file.write_function(uh)
+
+    with XDMFFile(MPI.COMM_WORLD, "wavenumberNuevo.xdmf", "w") as file:
+        file.write_mesh(mesh)
+        file.write_function(epsilonC)
+
+    return epsilonC #retorna permitividad
+
+
+
 
 
 if __name__ == '__main__':
@@ -735,5 +933,4 @@ if __name__ == '__main__':
     plt.axis('off')
     plt.show()
     
-
 
