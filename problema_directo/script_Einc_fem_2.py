@@ -12,6 +12,7 @@
 import numpy as np
 from mpi4py import MPI
 import dolfinx
+import dolfinx.fem.petsc
 import ufl
 import sys
 from petsc4py import PETSc
@@ -68,7 +69,7 @@ mesh, cell_tags, facet_tags = gmshio.read_from_msh("modelo_prueba.msh", MPI.COMM
                             #cell_type=dolfinx.mesh.CellType.triangle,)
 
 
-##mesh = dolfinx.mesh.create_unit_square(MPI.COMM_WORLD, 50, 50)
+#mesh = dolfinx.mesh.create_unit_square(MPI.COMM_WORLD, 50, 50)
 
 W = dolfinx.fem.FunctionSpace(mesh, ("DG", 0))
 k = dolfinx.fem.Function(W)
@@ -112,17 +113,34 @@ problem = dolfinx.fem.petsc.LinearProblem(a, L, petsc_options=opt)
 uh = problem.solve()
 uh.name = "u"
 
-## Postprocessing
-from dolfinx.io import XDMFFile #, VTXWriter
-u_abs = dolfinx.fem.Function(V, dtype=np.float64)
-u_abs.x.array[:] = np.abs(uh.x.array)
-print(type(uh))
-#np.savez('Ez_salidas.npz',ezr = uh.x.array.real,ezi = uh.x.array.imag)
+import pyvista
+#pyvista.start_xvfb()
+p_mesh = pyvista.UnstructuredGrid(*dolfinx.plot.vtk_mesh(mesh, mesh.topology.dim))
+pyvista_cells, cell_types, geometry = dolfinx.plot.vtk_mesh(V)
+grid = pyvista.UnstructuredGrid(pyvista_cells, cell_types, geometry)
+#grid.point_data["u_real"] = uh.x.array.real
+grid.point_data["u_imag"] = uh.x.array.imag
+#_ = grid.set_active_scalars("u_real")
+p_real = pyvista.Plotter()
+p_real.add_text("uh real", position="upper_edge", font_size=14, color="black")
+p_real.add_mesh(grid, show_edges=True)
+p_real.view_xy()
+#if not pyvista.OFF_SCREEN:
+#pyvista.OFF_SCREEN = True
+p_real.show()
 
-# XDMF writes data to mesh nodes
-with XDMFFile(MPI.COMM_WORLD, "out.xdmf", "w") as file:
-    file.write_mesh(mesh)
-    file.write_function(u_abs)
+
+### Postprocessing
+#from dolfinx.io import XDMFFile #, VTXWriter
+#u_abs = dolfinx.fem.Function(V, dtype=np.float64)
+#u_abs.x.array[:] = np.abs(uh.x.array)
+#print(type(uh))
+##np.savez('Ez_salidas.npz',ezr = uh.x.array.real,ezi = uh.x.array.imag)
+
+## XDMF writes data to mesh nodes
+#with XDMFFile(MPI.COMM_WORLD, "out.xdmf", "w") as file:
+    #file.write_mesh(mesh)
+    #file.write_function(u_abs)
 
 
 nant_r = 16 #antenas receptoras
@@ -141,49 +159,49 @@ points[0] = xantenas_r
 points[1] = yantenas_r
 u_values = []
 
-from dolfinx import geometry
-bb_tree = geometry.BoundingBoxTree(mesh, mesh.topology.dim)
+#from dolfinx import geometry
+#bb_tree = geometry.BoundingBoxTree(mesh, mesh.topology.dim)
 
-cells = []
-points_on_proc = []
-# Find cells whose bounding-box collide with the the points
-cell_candidates = geometry.compute_collisions(bb_tree, points.T)
-# Choose one of the cells that contains the point
-colliding_cells = geometry.compute_colliding_cells(mesh, cell_candidates, points.T)
-for i, point in enumerate(points.T):
-    if len(colliding_cells.links(i))>0:
-        points_on_proc.append(point)
-        cells.append(colliding_cells.links(i)[0])
+#cells = []
+#points_on_proc = []
+## Find cells whose bounding-box collide with the the points
+#cell_candidates = geometry.compute_collisions(bb_tree, points.T)
+## Choose one of the cells that contains the point
+#colliding_cells = geometry.compute_colliding_cells(mesh, cell_candidates, points.T)
+#for i, point in enumerate(points.T):
+    #if len(colliding_cells.links(i))>0:
+        #points_on_proc.append(point)
+        #cells.append(colliding_cells.links(i)[0])
 
-points_on_proc = np.array(points_on_proc, dtype=np.float64)
-u_values = uh.eval(points_on_proc, cells)
+#points_on_proc = np.array(points_on_proc, dtype=np.float64)
+#u_values = uh.eval(points_on_proc, cells)
 
-print(u_values,type(u_values))
+#print(u_values,type(u_values))
 
-import matplotlib.pyplot as plt
-fig, (axs1,axs2) = plt.subplots(2,1,figsize=(16, 10))
-N=9
-cmap = plt.get_cmap('Set2', N)
-
-
+#import matplotlib.pyplot as plt
+#fig, (axs1,axs2) = plt.subplots(2,1,figsize=(16, 10))
+#N=9
+#cmap = plt.get_cmap('Set2', N)
 
 
-axs1.plot(abs(u_values),'^-', label='módulo FEM',markersize=10,)#color =cmap(0)) 
-axs2.plot(-np.angle(u_values),'v-', label='fase FEM',markersize=10,)#color=cmap(2)) 
 
-np.savez('Ez_fem',absEz = abs(u_values),angleEz = -np.angle(u_values))
 
-#for n in range(0,len(xantenas_r)):
-    #print(uh(xantenas_r[n],yantenas_r[n]))
+#axs1.plot(abs(u_values),'^-', label='módulo FEM',markersize=10,)#color =cmap(0)) 
+#axs2.plot(-np.angle(u_values),'v-', label='fase FEM',markersize=10,)#color=cmap(2)) 
 
-#with XDMFFile(MPI.COMM_WORLD, "wavenumber.xdmf", "w") as file:
-    #file.write_mesh(mesh)
-    #file.write_function(k)
+#np.savez('Ez_fem',absEz = abs(u_values),angleEz = -np.angle(u_values))
 
-##from matplotlib import pyplot as plt
+##for n in range(0,len(xantenas_r)):
+    ##print(uh(xantenas_r[n],yantenas_r[n]))
 
-##plt.figure(1)
-##extent2=[-0.25/2,0.25/2,-0.25/2,0.25/2]
-##plt.imshow(u_abs.x.array[:].transpose(),extent = extent2)
-plt.show()
+##with XDMFFile(MPI.COMM_WORLD, "wavenumber.xdmf", "w") as file:
+    ##file.write_mesh(mesh)
+    ##file.write_function(k)
+
+###from matplotlib import pyplot as plt
+
+###plt.figure(1)
+###extent2=[-0.25/2,0.25/2,-0.25/2,0.25/2]
+###plt.imshow(u_abs.x.array[:].transpose(),extent = extent2)
+#plt.show()
 
