@@ -490,8 +490,8 @@ def RunMoM(cilindro, acoplante,trans,receptor,size_doi = 2,Tx = 1 ,RES = 40):
     X = R_obs*N.cos(phi) # 1 x Ns % x coordinates of receiving antennas
     Y = R_obs*N.sin(phi) # 1 x Ns % y coordinates of receiving antennas
     R_trans = trans.rhoS # radius of the circle formed by receiving antennas
-    XT = R_trans*N.cos(phi)[Tx-1] # 1 x Ns % x coordinates of receiving antennas
-    YT = R_trans*N.sin(phi)[Tx-1] # 1 x Ns % y coordinates of receiving antennas
+    XT = R_trans*N.cos(phi)[Tx] # 1 x Ns % x coordinates of receiving antennas
+    YT = -R_trans*N.sin(phi)[Tx] # 1 x Ns % y coordinates of receiving antennas
     epsono_r_c = cilindro.epsr # the constant relative permittivity of the object
 
     #Positions of the cells 
