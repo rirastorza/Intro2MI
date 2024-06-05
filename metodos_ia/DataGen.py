@@ -78,38 +78,10 @@ def CampoUnaAntena(ACOPLANTE_parameters,TRANSMISOR_parameters,Tr=0, rad=0.015, x
 
     Ezfdtd,eps_data = RunMeep(cilindro1,ACOPLANTE_parameters,TRANSMISOR_parameters, Tx, box,RES = resolucion,calibration = False)
 
-    #flag = generaCTL(problemname+".ctl",center,SCATTERER_parameters,ACOPLANTE_parameters,TRANSMISOR_parameters,1, Tx, box,tsim,resolucion)
-    #string = "meep no-bone?=false "+problemname+".ctl"
-    #os.system(string)
-    
-    #print("Graficando el mapa de permitividades...")
-    #string = "h5topng -S3 "+problemname+"-eps-000000.00.h5"
-    #os.system(string)
-    
-    #
-    #-Fin de generación de h5
-    #
-    
-    #filename = problemname+"-eps-000000.00.h5"
-    #import h5py
-    #f = h5py.File(filename, 'r')
-    #print("Keys: %s" % f.keys())
-    #a_group_key = f.keys()[0]
-    #epsilon = list(f[a_group_key])
-    #NN = len(eps_data)
-    #deltaX = sx/(NN)
-    
-    ##------------------
+       ##------------------
     print('start time: ', start_time)
     print('end time:   ', tm.strftime('%H:%M:%S'))
-    
-    #Campo genereado con Meep (FDTD)
-    #filename = problemname+"-EzTx"+str(Tx)+".h5"
-    #f = h5py.File(filename, 'r')
-    #a_group_key = f.keys()[0]
-    #ezti = N.asarray(list(f[a_group_key]))
-    #a_group_key = f.keys()[1]
-    #eztr = N.asarray(list(f[a_group_key]))
+      
     Ezmeep = Ezfdtd#eztr[:,:,0] +1.0j*ezti[:,:,0]
     
     #Phase unwrapping
@@ -118,8 +90,9 @@ def CampoUnaAntena(ACOPLANTE_parameters,TRANSMISOR_parameters,Tr=0, rad=0.015, x
     deltaX = sx/(NN)
     #a = 0.005 #Unidad de meep
     #print(n)
-    xSint = int(deltaX*((0.15/2)*N.cos(Tx*2*pi/TRANSMISOR_parameters.S)))+int(NN/2) #Coordenada x antena emisora
-    ySint = int(deltaX*((0.15/2)*N.sin(Tx*2*pi/TRANSMISOR_parameters.S)))+int(NN/2)
+    xSint = int(((0.15/2/deltaX)*N.cos(Tx*2*pi/TRANSMISOR_parameters.S)))+int(NN/2) #Coordenada x antena emisora
+    ySint = int(((0.15/2/deltaX)*N.sin(Tx*2*pi/TRANSMISOR_parameters.S)))+int(NN/2)
+    print(Tx)
     print(xSint)
     print(ySint)
     print(Ezmeep.shape)
@@ -155,15 +128,15 @@ for j in range(877,1000):
     print('Epsilon: ',epsi[j])
     print('Sigma: ',sig[j])
     
-    #Grafico cilindro
-    fig, ax = plt.subplots()
-    ax.add_patch(plt.Circle((0, 0), TRANSMISOR_parameters.rhoS, color='r', alpha=0.5))
-    ax.add_patch(plt.Circle((Xc[j], Yc[j]), r[j], color='b', alpha=0.5))
-    #Use adjustable='box-forced' to make the plot area square-shaped as well.
-    ax.set_aspect('equal', adjustable='datalim')
-    ax.plot()   #Causes an autoscale update.
-    plt.show()
-    input("Press Enter to continue...")
+    ##Grafico cilindro
+    #fig, ax = plt.subplots()
+    #ax.add_patch(plt.Circle((0, 0), TRANSMISOR_parameters.rhoS, color='r', alpha=0.5))
+    #ax.add_patch(plt.Circle((Xc[j], Yc[j]), r[j], color='b', alpha=0.5))
+    ##Use adjustable='box-forced' to make the plot area square-shaped as well.
+    #ax.set_aspect('equal', adjustable='datalim')
+    #ax.plot()   #Causes an autoscale update.
+    #plt.show()
+    #input("Press Enter to continue...")
     
     archivo = 'Data'+str(j+1)+'.out'
     archpar = 'Param'+str(j+1)+'.out'
@@ -173,19 +146,14 @@ for j in range(877,1000):
     par.write('#Parametros: Radio / Xc / Yc / Epsilon / Sigma '+' \n')
     for i in range(TRANSMISOR_parameters.S):
         EzR,EzIm,phaseuw,Ezmeep = CampoUnaAntena(ACOPLANTE_parameters,TRANSMISOR_parameters,Tr=i, rad=r[j], xc=Xc[j], yc =Yc[j], eps=epsi[j], sigma=sig[j])
-        #problemname = "cilindroNUEVO"
-        #sx = 250.0e-3
-        #filename = problemname+"-eps-000000.00.h5"
-        #fil = h5py.File(filename, 'r')
-        #a_group_key = fil.keys()[0]
-        #epsilon = list(fil[a_group_key])
-        #NN = len(epsilon)
-        #deltaX = sx/(NN)
+   
+        NN = len(Ezmeep)
+        deltaX = sx/(NN)
         
         for k in range(TRANSMISOR_parameters.S):
-            idx = mod(i+k,TRANSMISOR_parameters.S)
-            Xr = int(resolucion*((0.15/2)*N.cos(idx*2*pi/TRANSMISOR_parameters.S))/a)+int(n/2) #Coordenadas antena receptora
-            Yr = int(resolucion*((0.15/2)*N.sin(idx*2*pi/TRANSMISOR_parameters.S))/a)+int(n/2)
+            idx = N.mod(i+k,TRANSMISOR_parameters.S)
+            Xr = int(((0.15/2/deltaX)*N.cos(idx*2*pi/TRANSMISOR_parameters.S)))+int(NN/2) #Coordenadas antena receptora
+            Yr = int(((0.15/2/deltaX)*N.sin(idx*2*pi/TRANSMISOR_parameters.S)))+int(NN/2)
             Datos.append([EzR[Xr,Yr],EzIm[Xr,Yr],abs(Ezmeep)[Xr,Yr],phaseuw[Xr,Yr]])
             f.write('%.15f'%Datos[TRANSMISOR_parameters.S*i+k][0]+' '+'%.15f'%Datos[TRANSMISOR_parameters.S*i+k][1]+' '+'%.15f'%Datos[TRANSMISOR_parameters.S*i+k][2]+' '+'%.15f'%Datos[TRANSMISOR_parameters.S*i+k][3]+' \n')
     par.write(str('%.15f'%r[j])+' \n')
@@ -195,9 +163,4 @@ for j in range(877,1000):
     par.write(str('%.15f'%sig[j])+' \n')
     f.close()
     par.close()
-    #string = "rm *.h5"
-    #os.system(string)
-    #string = "rm *.ctl"
-    #os.system(string)
-    #string = "rm *.png"
-    #os.system(string)
+  
