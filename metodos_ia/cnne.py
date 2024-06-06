@@ -29,32 +29,26 @@ def escalae(rawpoints, high=1.0, low=0.0):
     rng = maxs - mins
     return high - (((high - low) * (maxs - rawpoints)) / rng)
 
-def escalap(rawpoints, high=1.0, low=0.0):
-    mins = -10.50
-    maxs = 10.50
-    rng = maxs - mins
-    return high - (((high - low) * (maxs - rawpoints)) / rng)
-
 def escalar(rawpoints, high=1.0, low=0.0):
-    mins = 2.0e-3
-    maxs = 4.0e-2
+    mins = 1.0e-2
+    maxs = 5.0e-2
     rng = maxs - mins
     return high - (((high - low) * (maxs - rawpoints)) / rng)
 
 def escalacoord(rawpoints, high=1.0, low=0.0):
-    mins = -7.0e-2
-    maxs = 7.0e-2
+    mins = -9.0e-2
+    maxs = 9.0e-2
     rng = maxs - mins
     return high - (((high - low) * (maxs - rawpoints)) / rng)
 
 def escalaeps(rawpoints, high=1.0, low=0.0):
-    mins = 8.0
+    mins = 2.0
     maxs = 82.0
     rng = maxs - mins
     return high - (((high - low) * (maxs - rawpoints)) / rng)
 
 def escalasigma(rawpoints, high=1.0, low=0.0):
-    mins = 0.3
+    mins = 1e-5
     maxs = 1.70
     rng = maxs - mins
     return high - (((high - low) * (maxs - rawpoints)) / rng)
@@ -65,31 +59,26 @@ def escalainve(rawpoints, high=15.0, low=0.0):
     rng = maxs - mins
     return high - (((high - low) * (maxs - rawpoints)) / rng)
 
-def escalainvp(rawpoints, high=10.50, low=-10.50):
+
+def escalainvr(rawpoints, high=5.0e-2, low=1.0e-2):
     mins = 0.0
     maxs = 1.0
     rng = maxs - mins
     return high - (((high - low) * (maxs - rawpoints)) / rng)
 
-def escalainvr(rawpoints, high=4.0e-2, low=2.0e-3):
+def escalainvcoord(rawpoints, high=9.0e-2, low=-9.0e-2):
     mins = 0.0
     maxs = 1.0
     rng = maxs - mins
     return high - (((high - low) * (maxs - rawpoints)) / rng)
 
-def escalainvcoord(rawpoints, high=7.0e-2, low=-7.0e-2):
+def escalainveps(rawpoints, high=82.0, low=2.0):
     mins = 0.0
     maxs = 1.0
     rng = maxs - mins
     return high - (((high - low) * (maxs - rawpoints)) / rng)
 
-def escalainveps(rawpoints, high=82.0, low=8.0):
-    mins = 0.0
-    maxs = 1.0
-    rng = maxs - mins
-    return high - (((high - low) * (maxs - rawpoints)) / rng)
-
-def escalainvsigma(rawpoints, high=1.70, low=0.3):
+def escalainvsigma(rawpoints, high=1.70, low=1e-5):
     mins = 0.0
     maxs = 1.0
     rng = maxs - mins
@@ -100,13 +89,13 @@ def escalainvsigma(rawpoints, high=1.70, low=0.3):
 trnoise = 0.05
 for i in range(numdat):
     dataset = np.loadtxt('AllData/Data'+str(i+1)+'.out', dtype='str', delimiter="\n", comments='#')
-    for j in range(256):
+    for j in range(nant**2):
         temp = dataset[j].split()
         Data[i][j][0] = np.random.normal(float(temp[2]), trnoise*float(temp[2]))
         Data[i][j][1] = np.random.normal(float(temp[3]), trnoise*float(temp[3]))
 
 dataset = np.loadtxt('AllData/Einc.out', dtype='str', delimiter="\n", comments='#')
-for j in range(256):
+for j in range(nant**2):
     temp = dataset[j].split()
     Einc[0][j][0] = np.random.normal(float(temp[2]), trnoise*float(temp[2]))
     Einc[0][j][1] = np.random.normal(float(temp[3]), trnoise*float(temp[3]))
@@ -117,12 +106,12 @@ for i in range(numdat):
         Param[i][j] = float(dataset[j])
 
 for i in range(numdat):
-    for j in range(256):
+    for j in range(nant**2):
         Emnorm[i][j] = Data[i][j][0]/Einc[0][j][0]
         #Epnorm[i][j] = Data[i][j][1]-Einc[0][j][1]
 
 
-Emnorm = np.reshape(Emnorm,(numdat,16,16,1))
+Emnorm = np.reshape(Emnorm,(numdat,nant,nant,1))
 
 # Normalizacion de Entrada y Salida de la Red Neuronal
 Emnorm = escalae(Emnorm) 
