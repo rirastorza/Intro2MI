@@ -39,7 +39,7 @@ eps0 = S.epsilon_0
 c = S.c
 mu0 = S.mu_0
 
-a = 0.005 #Meep unit
+a = 0.01 #Meep unit
 
 #
 # - Clases de parámetros del dispersor, acoplante, y transmisor. 
@@ -247,11 +247,11 @@ def EZ_CILINDER_LINESOURCE_MATRIZ(epsilon,cilindro, acoplante,trans,Tx,deltaX):
 # - Función numérica con FDTD utilizando software meep
 #
 
-def RunMeep(cilindro, acoplante,trans, Tx,caja,RES = 5,calibration = False, unit=0.01):
+def RunMeep(cilindro, acoplante,trans, Tx,caja,RES = 5,calibration = False, unit= a):
     
     a = unit #Meep unit
     res = RES # pixels/a
-    dpml = 1 
+    dpml = 2 
     
     sx = caja[0]/a 
     sy = caja[1]/a 

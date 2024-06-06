@@ -67,8 +67,8 @@ def CampoUnaAntena(ACOPLANTE_parameters,TRANSMISOR_parameters,Tr=0, rad=0.015, x
     xt = (rhoS)*N.cos(Tx*2*pi/TRANSMISOR_parameters.S) #Coordenada x antena transmisora
     yt = (rhoS)*N.sin(Tx*2*pi/TRANSMISOR_parameters.S) #Coordenada y antena transmisora
 
-    sx = 0.25 #(0.25 m)
-    sy = 0.25
+    sx = 0.3 #(0.25 m)
+    sy = 0.3
 
     #calibration = False # si hay o no cilindro
     center = [xc,yc]
@@ -85,7 +85,6 @@ def CampoUnaAntena(ACOPLANTE_parameters,TRANSMISOR_parameters,Tr=0, rad=0.015, x
     Ezmeep = Ezfdtd#eztr[:,:,0] +1.0j*ezti[:,:,0]
     
     #Phase unwrapping
-    sx = 250.0e-3
     NN = len(eps_data)
     deltaX = sx/(NN)
     #a = 0.005 #Unidad de meep
@@ -105,11 +104,11 @@ def CampoUnaAntena(ACOPLANTE_parameters,TRANSMISOR_parameters,Tr=0, rad=0.015, x
     EzIm = Ezfdtd.imag#ezti[:,:,0]
     return EzR,EzIm,phaseuw,Ezmeep
 
-for j in range(877,1000):
+for j in range(1,999):
     Datos = []
     semilla = int(j+100) #La semilla del generado será el número del modelo 
     N.random.seed(semilla)#Seteo la semilla del generador
-    r = N.random.uniform(0.002,0.030,int(1e4))
+    r = N.random.uniform(0.01,0.050,int(1e4))
     N.random.seed(semilla+10)
     radscat = N.random.uniform(-TRANSMISOR_parameters.rhoS-(-0.005-r),TRANSMISOR_parameters.rhoS-(0.005+r),int(1e4))
     N.random.seed(semilla+20)
