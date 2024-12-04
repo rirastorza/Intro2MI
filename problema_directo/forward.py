@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Microwave imaging: solution for many forward problems
+Microwave imaging: solution for many forward problems (Version nov-2024)
 
 Este módulo contiene las funciones para simulaciones del problema directo
 de modelos canónicos y geometrías provistas por gmsh.
 
+Contiene:
+    *Solucion Toerica
+    *Simulaciones:(FDTD,MoM,FEM)
+    
+      
 Está basado en los siguientes libros y publicaciones:
 
 -Xudong Chen, Computational Methods for Electromagnetic Inverse Scattering
@@ -30,7 +35,7 @@ from matplotlib import pyplot as plt
 import meep as mp
 
 
-#
+#----------------------
 # - Constantes
 #
 
@@ -39,10 +44,12 @@ eps0 = S.epsilon_0
 c = S.c
 mu0 = S.mu_0
 
-a = 0.005 #Meep unit
+a = 0.01 #Meep unit
 
+
+#%%
 #
-# - Clases de parámetros del dispersor, acoplante, y transmisor. 
+# - Clases de parámetros del dispersor, acoplante, y transmisor.
 #
 class SCATTERER_parameters:
     """
@@ -77,8 +84,6 @@ class SCATTERER_parameters:
         except FileNotFoundError:
             SCATTERER_parameters.thereIsMesh = False
 
-
-
 class ACOPLANTE_parameters:
     epsr = 1.0  #frecuencia 1 GHz (por defecto).
     sigma = 0.0 #conductividad
@@ -101,7 +106,7 @@ class RECEPTOR_parameters:
     amp = 1000.0 #Amplitud de la fuente
     #k = 2*pi*f/c
 
-
+#%%
 #
 # - Función para cambio de coordenadas cartesianas a polares
 #
@@ -112,12 +117,14 @@ def cart2pol(x,y):
     return phi,rho
 
 
+#%%
 #
-# - Definición de funciones 
+# - Definición de funciones -------------------------------------------------- 
 #
 
+#%% 1) TEORICAS ----------------------------
 #
-# - Definición de funciones canónicas
+# - Definición de funciones canónicas 
 #
 
 #Calcula onda cilíndrica debido a una línea infinita de corriente
@@ -204,6 +211,9 @@ def EZ_CILINDER_LINESOURCE_MATRIZ(epsilon,cilindro, acoplante,trans,Tx,deltaX):
 
     x = N.linspace(-len(epsilon)*deltaX/2.+deltaX/2, len(epsilon)*deltaX/2.-deltaX/2, len(epsilon))
     y = N.linspace(-len(epsilon)*deltaX/2.+deltaX/2, len(epsilon)*deltaX/2.-deltaX/2, len(epsilon))
+    
+   
+    
     xv, yv = N.meshgrid(x, y)
 
     Ezinc = N.zeros_like(epsilon,dtype=complex)
@@ -238,20 +248,22 @@ def EZ_CILINDER_LINESOURCE_MATRIZ(epsilon,cilindro, acoplante,trans,Tx,deltaX):
     return x,Eztheory
 
 
-
+#%% 2) NUMERICAS ----------------------------
 #
-# - Funciones numéricas (FDTD)
+# - A) Funciones numéricas (FDTD)
 #
 
 #
 # - Función numérica con FDTD utilizando software meep
+#modificado 29/10
+#ojo la salida es trasnpuesta a los ejes, esta arregalada para que de igual
 #
 
-def RunMeep(cilindro, acoplante,trans, Tx,caja,RES = 5,calibration = False, unit=0.01):
-    
+def RunMeep(cilindro, acoplante,trans, Tx,caja,RES = 5,calibration = False, unit= a, nt = 600):
+    #distintos ejes, x=-y e y=x)
     a = unit #Meep unit
     res = RES # pixels/a
-    dpml = 1 
+    dpml = 2 
     
     sx = caja[0]/a 
     sy = caja[1]/a 
@@ -268,19 +280,23 @@ def RunMeep(cilindro, acoplante,trans, Tx,caja,RES = 5,calibration = False, unit
     materialCilindro = mp.Medium(epsilon= cilindro.epsr, D_conductivity= sigmaCylinderMeep) # Cylinder dielectric properties at operation frequency
    
     default_material = materialBackground
+    
+    Xc= cilindro.yc
+    Yc= cilindro.xc
 
     #Simulation box and elements
     cell = mp.Vector3(sx,sy,0)
     pml_layers = [mp.PML(dpml)]
     
     if calibration:#el cilindro del centro es Background
-        geometry = [mp.Cylinder(material=materialBackground, radius=cilindro.radio/a, height=mp.inf, center=mp.Vector3(cilindro.xc/a,cilindro.yc/a,0))]
+        geometry = [mp.Cylinder(material=materialBackground, radius=cilindro.radio/a, height=mp.inf, center=mp.Vector3(Xc/a,Yc/a,0))]
     else:#el cilindro del centro es la muestra
-        geometry = [mp.Cylinder(material=materialCilindro, radius=cilindro.radio/a, height=mp.inf, center=mp.Vector3(cilindro.xc/a,cilindro.yc/a,0))] 
+        geometry = [mp.Cylinder(material=materialCilindro, radius=cilindro.radio/a, height=mp.inf, center=mp.Vector3(Xc/a,Yc/a,0))] 
     
+    #arrreglado
+    xt = (trans.rhoS)*N.cos(Tx*2*pi/trans.S) #Coordenada x antena transmisora #Coordenada x antena transmisora
+    yt = (trans.rhoS)*N.sin(Tx*2*pi/trans.S) #Coordenada x antena transmisora(trans.rhoS)*N.cos(Tx*2*pi/trans.S) #Coordenada x antena transmisor
     
-    xt = (trans.rhoS)*N.cos(Tx*2*pi/trans.S) #Coordenada x antena transmisora
-    yt = (trans.rhoS)*N.sin(Tx*2*pi/trans.S) #Coordenada y antena transmisora
     
     #amp = 1000
     sources = [mp.Source(mp.ContinuousSource(frequency=fcen),component = mp.Ez,center = mp.Vector3(xt/a,yt/a,0.0), amplitude = trans.amp,size=mp.Vector3(0.0,0.0,mp.inf))]
@@ -288,7 +304,7 @@ def RunMeep(cilindro, acoplante,trans, Tx,caja,RES = 5,calibration = False, unit
     sim = mp.Simulation(cell_size=cell, sources=sources, resolution=res, default_material=default_material, eps_averaging=False, geometry=geometry,boundary_layers=pml_layers,force_complex_fields = True)
     
 
-    nt = 600
+    #nt = nt
 
     sim.run(until=nt)
     
@@ -300,107 +316,109 @@ def RunMeep(cilindro, acoplante,trans, Tx,caja,RES = 5,calibration = False, unit
     return ez_data,eps_data
 
 
-#
-# - Calculado con el flujo
-# Basado en: https://meep.readthedocs.io/en/latest/Python_Tutorials/Basics/#mie-scattering-of-a-lossless-dielectric-sphere
-def RunMeep_flux(cilindro, acoplante,trans, Tx,Tr,caja,RES = 5,calibration = False):
+##
+## - Calculado con el flujo
+## Basado en: https://meep.readthedocs.io/en/latest/Python_Tutorials/Basics/#mie-scattering-of-a-lossless-dielectric-sphere
+#def RunMeep_flux(cilindro, acoplante,trans, Tx,Tr,caja,RES = 5,calibration = False):
 
-    a = 0.005 #Meep unit
-    res = RES # pixels/a
-    dpml = 1
+    #a = 0.005 #Meep unit
+    #res = RES # pixels/a
+    #dpml = 1
 
-    sx = caja[0]/a
-    sy = caja[1]/a
+    #sx = caja[0]/a
+    #sy = caja[1]/a
 
-    #print('sxa: ',sx,'sxa: ',sy)
+    ##print('sxa: ',sx,'sxa: ',sy)
 
-    fcen = trans.f*(a/c)  # pulse center frequency
-    dfrq = 500e6*(a/c)
-    sigmaBackgroundMeep = acoplante.sigma*a/(c*acoplante.epsr*eps0)
-    sigmaCylinderMeep = cilindro.sigma*a/(c*cilindro.epsr*eps0)
+    #fcen = trans.f*(a/c)  # pulse center frequency
+    #dfrq = 500e6*(a/c)
+    #sigmaBackgroundMeep = acoplante.sigma*a/(c*acoplante.epsr*eps0)
+    #sigmaCylinderMeep = cilindro.sigma*a/(c*cilindro.epsr*eps0)
 
-    materialBackground = mp.Medium(epsilon=acoplante.epsr, D_conductivity= sigmaBackgroundMeep) # Background dielectric properties at operation frequency
-    materialCilindro = mp.Medium(epsilon= cilindro.epsr, D_conductivity= sigmaCylinderMeep) # Cylinder dielectric properties at operation frequency
+    #materialBackground = mp.Medium(epsilon=acoplante.epsr, D_conductivity= sigmaBackgroundMeep) # Background dielectric properties at operation frequency
+    #materialCilindro = mp.Medium(epsilon= cilindro.epsr, D_conductivity= sigmaCylinderMeep) # Cylinder dielectric properties at operation frequency
 
-    default_material = materialBackground
+    #default_material = materialBackground
 
-    #Simulation box and elements
-    cell = mp.Vector3(sx,sy,0)
-    pml_layers = [mp.PML(dpml)]
+    ##Simulation box and elements
+    #cell = mp.Vector3(sx,sy,0)
+    #pml_layers = [mp.PML(dpml)]
 
-    radio_antena = 0.5e-3
-    xr = (trans.rhoS)*N.cos((Tr)*2*pi/trans.S) #Coordenada x antena transmisora
-    yr = (trans.rhoS)*N.sin((Tr)*2*pi/trans.S) #Coordenada y antena transmisora
+    #radio_antena = 0.5e-3
+    #xr = (trans.rhoS)*N.cos((Tr)*2*pi/trans.S) #Coordenada x antena transmisora
+    #yr = (trans.rhoS)*N.sin((Tr)*2*pi/trans.S) #Coordenada y antena transmisora
 
-    if calibration:#el cilindro del centro es Background
-        geometry = [mp.Cylinder(material=materialBackground, radius=cilindro.radio/a, height=mp.inf, center=mp.Vector3(cilindro.xc/a,cilindro.yc/a,0)),
-                    mp.Cylinder(center = mp.Vector3(xr/a,yr/a,0), radius=radio_antena/a,height=mp.inf,material=mp.metal)]#receptor
-    else:#el cilindro del centro es la muestra
-        geometry = [mp.Cylinder(material=materialCilindro, radius=cilindro.radio/a, height=mp.inf, center=mp.Vector3(cilindro.xc/a,cilindro.yc/a,0)),
-                    mp.Cylinder(center = mp.Vector3(xr/a,yr/a,0), radius=radio_antena/a,height=mp.inf,material=mp.metal)]#receptor
-
-
-    xt = (trans.rhoS)*N.cos(Tx*2*pi/trans.S) #Coordenada x antena transmisora
-    yt = (trans.rhoS)*N.sin(Tx*2*pi/trans.S) #Coordenada y antena transmisora
-
-    #amp = 1000
-    sources = [mp.Source(mp.GaussianSource(fcen, fwidth=dfrq),
-                                           component = mp.Ez,
-                                           center = mp.Vector3(xt/a,yt/a,0.0),
-                                           amplitude = trans.amp,
-                                           size=mp.Vector3(0.0,0.0,mp.inf))]
-
-    sim = mp.Simulation(cell_size=cell, sources=sources, resolution=res, default_material=default_material, eps_averaging=False, geometry=geometry,boundary_layers=pml_layers,)#force_complex_fields = True)
-
-    nfrq = 100
-    radio_receptor = 2.0e-3
-    # Flujo en una caja en transmisor
-    flux_box_transmisor = sim.add_flux(fcen, 0, 1,
-                        mp.FluxRegion(center=mp.Vector3(xt/a+radio_receptor/a, yt/a,0), size=mp.Vector3(0.0,2*radio_receptor/a,0.0), weight=+1),
-                        mp.FluxRegion(center=mp.Vector3(xt/a-radio_receptor/a, yt/a,0), size=mp.Vector3(0.0,2*radio_receptor/a,0.0), weight=-1),
-                        mp.FluxRegion(center=mp.Vector3(xt/a, yt/a+radio_receptor/a,0), size=mp.Vector3(2*radio_receptor/a,0.0,0.0), weight=+1),
-                        mp.FluxRegion(center=mp.Vector3(xt/a, yt/a-radio_receptor/a,0), size=mp.Vector3(2*radio_receptor/a,0.0,0.0), weight=-1))
-
-    ## Flujo en una caja en receptor
-    #flux_box_receptor = sim.add_flux(fcen,dfrq, nfrq,
-                        #mp.FluxRegion(center=mp.Vector3(xr/a+radio_receptor/a, yr/a,0), size=mp.Vector3(0.0,2*radio_receptor/a,0.0), weight=-1),
-                        #mp.FluxRegion(center=mp.Vector3(xr/a-radio_receptor/a, yr/a,0), size=mp.Vector3(0.0,2*radio_receptor/a,0.0), weight=+1),
-                        #mp.FluxRegion(center=mp.Vector3(xr/a, yr/a+radio_receptor/a,0), size=mp.Vector3(2*radio_receptor/a,0.0,0.0), weight=-1),
-                        #mp.FluxRegion(center=mp.Vector3(xr/a, yr/a-radio_receptor/a,0), size=mp.Vector3(2*radio_receptor/a,0.0,0.0), weight=+1))
-
-# Flujo en una caja en receptor
-    flux_box_receptor = sim.add_flux(fcen, 0, 1,
-                        mp.FluxRegion(center=mp.Vector3(xr/a-radio_receptor/a, yr/a,0), size=mp.Vector3(0.0,2*radio_receptor/a,0.0), weight=-1),
-                        mp.FluxRegion(center=mp.Vector3(xr/a+radio_receptor/a, yr/a,0), size=mp.Vector3(0.0,2*radio_receptor/a,0.0), weight=+1),
-                        mp.FluxRegion(center=mp.Vector3(xr/a, yr/a+radio_receptor/a,0), size=mp.Vector3(2*radio_receptor/a,0.0,0.0), weight=+1),
-                        mp.FluxRegion(center=mp.Vector3(xr/a, yr/a-radio_receptor/a,0), size=mp.Vector3(2*radio_receptor/a,0.0,0.0), weight=-1))
-
-    print('Transmisor:')
-    print('----------------------')
-    print(xt/a, yt/a)
-    print(xt/a+radio_receptor/a, yt/a)
-    print('----------------------')
-
-    print('Receptor:')
-    print('----------------------')
-    print(xr/a, yr/a)
-    print(xr/a-radio_receptor/a, yr/a)
-    print('----------------------')
-
-    nt = 1500
-
-    sim.run(until=nt)
-    #sim.run(until_after_sources=mp.stop_when_dft_decayed())
-
-    eps_data = sim.get_array(center=mp.Vector3(), size=cell, component=mp.Dielectric)
-    ez_data = sim.get_array(center=mp.Vector3(), size=cell, component=mp.Ez)
-
-    freqs = mp.get_flux_freqs(flux_box_transmisor)
-    near_flux_transmisor = mp.get_fluxes(flux_box_transmisor)
-    near_flux_receptor = mp.get_fluxes(flux_box_receptor)
+    #if calibration:#el cilindro del centro es Background
+        #geometry = [mp.Cylinder(material=materialBackground, radius=cilindro.radio/a, height=mp.inf, center=mp.Vector3(cilindro.xc/a,cilindro.yc/a,0)),
+                    #mp.Cylinder(center = mp.Vector3(xr/a,yr/a,0), radius=radio_antena/a,height=mp.inf,material=mp.metal)]#receptor
+    #else:#el cilindro del centro es la muestra
+        #geometry = [mp.Cylinder(material=materialCilindro, radius=cilindro.radio/a, height=mp.inf, center=mp.Vector3(cilindro.xc/a,cilindro.yc/a,0)),
+                    #mp.Cylinder(center = mp.Vector3(xr/a,yr/a,0), radius=radio_antena/a,height=mp.inf,material=mp.metal)]#receptor
 
 
-    return ez_data,eps_data,freqs,near_flux_transmisor,near_flux_receptor
+##corre como agujas del reloj
+
+    #xt = (trans.rhoS)*N.cos(-Tx*2*pi/trans.S) #Coordenada x antena transmisora
+    #yt = (trans.rhoS)*N.sin(-Tx*2*pi/trans.S) #Coordenada y antena transmisora
+
+    ##amp = 1000
+    #sources = [mp.Source(mp.GaussianSource(fcen, fwidth=dfrq),
+                                           #component = mp.Ez,
+                                           #center = mp.Vector3(xt/a,yt/a,0.0),
+                                           #amplitude = trans.amp,
+                                           #size=mp.Vector3(0.0,0.0,mp.inf))]
+
+    #sim = mp.Simulation(cell_size=cell, sources=sources, resolution=res, default_material=default_material, eps_averaging=False, geometry=geometry,boundary_layers=pml_layers,)#force_complex_fields = True)
+
+    #nfrq = 100
+    #radio_receptor = 2.0e-3
+    ## Flujo en una caja en transmisor
+    #flux_box_transmisor = sim.add_flux(fcen, 0, 1,
+                        #mp.FluxRegion(center=mp.Vector3(xt/a+radio_receptor/a, yt/a,0), size=mp.Vector3(0.0,2*radio_receptor/a,0.0), weight=+1),
+                        #mp.FluxRegion(center=mp.Vector3(xt/a-radio_receptor/a, yt/a,0), size=mp.Vector3(0.0,2*radio_receptor/a,0.0), weight=-1),
+                        #mp.FluxRegion(center=mp.Vector3(xt/a, yt/a+radio_receptor/a,0), size=mp.Vector3(2*radio_receptor/a,0.0,0.0), weight=+1),
+                        #mp.FluxRegion(center=mp.Vector3(xt/a, yt/a-radio_receptor/a,0), size=mp.Vector3(2*radio_receptor/a,0.0,0.0), weight=-1))
+
+    ### Flujo en una caja en receptor
+    ##flux_box_receptor = sim.add_flux(fcen,dfrq, nfrq,
+                        ##mp.FluxRegion(center=mp.Vector3(xr/a+radio_receptor/a, yr/a,0), size=mp.Vector3(0.0,2*radio_receptor/a,0.0), weight=-1),
+                        ##mp.FluxRegion(center=mp.Vector3(xr/a-radio_receptor/a, yr/a,0), size=mp.Vector3(0.0,2*radio_receptor/a,0.0), weight=+1),
+                        ##mp.FluxRegion(center=mp.Vector3(xr/a, yr/a+radio_receptor/a,0), size=mp.Vector3(2*radio_receptor/a,0.0,0.0), weight=-1),
+                        ##mp.FluxRegion(center=mp.Vector3(xr/a, yr/a-radio_receptor/a,0), size=mp.Vector3(2*radio_receptor/a,0.0,0.0), weight=+1))
+
+## Flujo en una caja en receptor
+    #flux_box_receptor = sim.add_flux(fcen, 0, 1,
+                        #mp.FluxRegion(center=mp.Vector3(xr/a-radio_receptor/a, yr/a,0), size=mp.Vector3(0.0,2*radio_receptor/a,0.0), weight=-1),
+                        #mp.FluxRegion(center=mp.Vector3(xr/a+radio_receptor/a, yr/a,0), size=mp.Vector3(0.0,2*radio_receptor/a,0.0), weight=+1),
+                        #mp.FluxRegion(center=mp.Vector3(xr/a, yr/a+radio_receptor/a,0), size=mp.Vector3(2*radio_receptor/a,0.0,0.0), weight=+1),
+                        #mp.FluxRegion(center=mp.Vector3(xr/a, yr/a-radio_receptor/a,0), size=mp.Vector3(2*radio_receptor/a,0.0,0.0), weight=-1))
+
+    #print('Transmisor:')
+    #print('----------------------')
+    #print(xt/a, yt/a)
+    #print(xt/a+radio_receptor/a, yt/a)
+    #print('----------------------')
+
+    #print('Receptor:')
+    #print('----------------------')
+    #print(xr/a, yr/a)
+    #print(xr/a-radio_receptor/a, yr/a)
+    #print('----------------------')
+
+    #nt = ntt
+
+    #sim.run(until=nt)
+    ##sim.run(until_after_sources=mp.stop_when_dft_decayed())
+
+    #eps_data = sim.get_array(center=mp.Vector3(), size=cell, component=mp.Dielectric)
+    #ez_data = sim.get_array(center=mp.Vector3(), size=cell, component=mp.Ez)
+
+    #freqs = mp.get_flux_freqs(flux_box_transmisor)
+    #near_flux_transmisor = mp.get_fluxes(flux_box_transmisor)
+    #near_flux_receptor = mp.get_fluxes(flux_box_receptor)
+
+
+    #return ez_data,eps_data,freqs,near_flux_transmisor,near_flux_receptor
 
 
 def RunMeep2(cilindro1, cilindro2, acoplante, trans, Tx, caja, RES=5, calibration=False, unit=0.005):
@@ -464,12 +482,13 @@ def RunMeep2(cilindro1, cilindro2, acoplante, trans, Tx, caja, RES=5, calibratio
 
 
 #
-# - Funciones numéricas (MoM)
+# - B) Funciones numéricas (MoM)
 #
 
 #
 # - Función numérica con MoM discretizando según Richmond
 #
+
 
 def RunMoM(cilindro, acoplante,trans,receptor,size_doi = 2,Tx = 1 ,RES = 40):
     '''
@@ -481,7 +500,7 @@ def RunMoM(cilindro, acoplante,trans,receptor,size_doi = 2,Tx = 1 ,RES = 40):
     k0 = 2*pi/landa # the wave number in the air
     imp = 120*pi # impedance of air
     size_DOI = size_doi # size of DOI
-    
+
     Ni = trans.S # number of incidence
     Ns = receptor.S # number of receiving antennas
     theta = N.linspace(0,2*pi-2*pi/Ni, num=Ni, endpoint=True) # angle of incidence
@@ -490,18 +509,18 @@ def RunMoM(cilindro, acoplante,trans,receptor,size_doi = 2,Tx = 1 ,RES = 40):
     X = R_obs*N.cos(phi) # 1 x Ns % x coordinates of receiving antennas
     Y = R_obs*N.sin(phi) # 1 x Ns % y coordinates of receiving antennas
     R_trans = trans.rhoS # radius of the circle formed by receiving antennas
-    XT = R_trans*N.cos(phi)[Tx] # 1 x Ns % x coordinates of receiving antennas
-    YT = -R_trans*N.sin(phi)[Tx] # 1 x Ns % y coordinates of receiving antennas
+    XT = R_trans*N.cos(theta)[Tx] # 1 x Ns % x coordinates of receiving antennas
+    YT = R_trans*N.sin(theta)[Tx] # 1 x Ns % y coordinates of receiving antennas
     epsono_r_c = cilindro.epsr # the constant relative permittivity of the object
 
-    #Positions of the cells 
+    #Positions of the cells
     M = RES # the square containing the object has a dimension of MxM
     d = size_DOI/M #the nearest distance of two cell centers
     #print('landa: ',landa/(epsono_r_c)**.5)
     #print('d: ',d)
 
     tx = d*N.linspace(-(M-1)/2,(M-1)/2,num=M,endpoint = True) #((-(M-1)/2):1:((M-1)/2))*d # 1 x M
-    ty = d*N.linspace((M-1)/2,-(M-1)/2,num=M,endpoint = True) #((-(M-1)/2):1:((M-1)/2))*d # 1 x M
+    ty = d*N.linspace(-(M-1)/2,(M-1)/2,num=M,endpoint = True)#d*np.linspace((M-1)/2,-(M-1)/2,num=M,endpoint = True) #((-(M-1)/2):1:((M-1)/2))*d # 1 x M
     x, y = N.meshgrid(tx, ty)# M x M
     celldia = 2*N.sqrt(d**2/pi) # diameter of cells
     cellrad = celldia/2 #radius of cells
@@ -519,13 +538,17 @@ def RunMoM(cilindro, acoplante,trans,receptor,size_doi = 2,Tx = 1 ,RES = 40):
     Xv = x.reshape((M**2,1))
     Yv = y.reshape((M**2,1))
     ji = epsono_r.reshape((M**2,1))-1
+    tau = 1j*2*pi*freq*ji #object function or scattering potential
+    H = N.zeros((M**2,M**2),dtype = complex)
     for mm in range(len(matrizCtes)):
         for nn in range(len(matrizCtes)):
             if mm == nn:
                 matrizCtes[mm,nn] = (ji[nn])*cte
+                #H[mm,nn] = cte
             else:
                 R = N.sqrt((Xv[mm]-Xv[nn])**2+(Yv[mm]-Yv[nn])**2)
                 matrizCtes[mm,nn] = (ji[nn])*(1j/2)*pi*k0*cellrad*special.jv(1,k0*cellrad)*special.hankel2(0,k0*R)
+                #H[mm,nn] = (1j/2)*pi*k0*cellrad*special.jv(1,k0*cellrad)*special.hankel2(0,k0*R)
 
     N.set_printoptions(precision=3)
 
@@ -540,9 +563,9 @@ def RunMoM(cilindro, acoplante,trans,receptor,size_doi = 2,Tx = 1 ,RES = 40):
     b = E_inc.reshape((M**2,1))
     #Solución de la ecuación lineal
     Et = N.linalg.solve(A, b)
-    
-    return Et.reshape((M,M)), epsono_r
 
+    #Et2 = N.linalg.solve(N.matmul(H,N.diag(tau))+D, b)
+    return Et.reshape((M,M)), epsono_r
 
 #
 # - Función numérica con MoM discretizando según Chen
@@ -692,6 +715,9 @@ def AH(J,Z,M,landa,epsono_r,epsrCb):
     
     return opa
 
+#
+# - C) Funciones numéricas (FEM)
+#
 
 def runFem(cilindro, acoplante, trans, receptor, tx, caja):
     """
@@ -869,7 +895,7 @@ def runFem(cilindro, acoplante, trans, receptor, tx, caja):
 
 
 
-
+#%%
 
 if __name__ == '__main__':
     
