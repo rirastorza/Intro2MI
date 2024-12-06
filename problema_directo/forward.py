@@ -107,7 +107,6 @@ class RECEPTOR_parameters:
     #k = 2*pi*f/c
 
 #%%
-#
 # - Función para cambio de coordenadas cartesianas a polares
 #
 def cart2pol(x,y):
