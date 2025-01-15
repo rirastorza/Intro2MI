@@ -22,7 +22,8 @@ En estos jupyter notebooks describiremos algunos de los métodos utilizados en l
    a. [FDTD](https://github.com/rirastorza/Intro2MI/blob/main/problema_directo/sim2.ipynb). Se comenta el uso de las herramientas de simulación con diferencias finitas con un ejemplo de calibración del setup experimental.<br>
    b. [FEM](https://github.com/rirastorza/Intro2MI/blob/main/problema_directo/script_Einc_fem.py). Se comenta la simulación del problema directo utilizando el método de elmentos finitos. En particular se compara la solución con la analítica.<br>
    c. [MoM](https://github.com/rirastorza/Intro2MI/blob/main/problema_directo/ejemplo_MoM_FDTD.ipynb). Se comenta la simulación del problema directo utilizando el método de los momentos. En particular se compara la solución con la analítica.<br>
-   d. [Calibración](https://github.com/rirastorza/Intro2MI/blob/main/problema_directo/sim0.ipynb). Se comenta la simulación de un cilindro centrado y descentrado con FDTD y la comparación con datos experimentales.<br>
+   d. [Simulación de fantomas](https://github.com/rirastorza/Intro2MI/blob/main/problema_directo/ejemplo_contrastes.ipynb). Se comenta la simulación de fantomas que se utililzarán en la etapa de calibración.<br>
+   e. [Calibración](https://github.com/rirastorza/Intro2MI/blob/main/problema_directo/sim0.ipynb). Se comenta la simulación de un cilindro centrado y descentrado con FDTD y la comparación con datos experimentales.<br>
 
 2. [Método deterministicos:](https://github.com/rirastorza/Intro2MI/tree/main/metodos_deterministicos) aquí se comentarán los métodos no iterativos: Born y Back-Propagation, y los métodos iterativos: Distorted Born, Contrast Source Inversion Method, etc.<br>
    a. [Método de Born](https://github.com/rirastorza/Intro2MI/blob/main/metodos_deterministicos/metodo_Born.ipynb)<br>
