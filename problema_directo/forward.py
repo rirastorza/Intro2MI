@@ -44,7 +44,7 @@ eps0 = S.epsilon_0
 c = S.c
 mu0 = S.mu_0
 
-a = 0.01 #Meep unit
+a = 0.005 #Meep unit
 
 
 #%%
