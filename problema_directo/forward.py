@@ -254,9 +254,32 @@ def EZ_CILINDER_LINESOURCE_MATRIZ(epsilon,cilindro, acoplante,trans,Tx,deltaX):
 
 #
 # - Función numérica con FDTD utilizando software meep
-#modificado 29/10
-#ojo la salida es trasnpuesta a los ejes, esta arregalada para que de igual
-#
+"""
+    Instalación de Meep en conda en linux ubuntu 24.04:
+
+    ---
+
+    wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+
+    bash miniconda.sh -b -p meepconda
+
+    export PATH="/home/ramiro/meepconda/bin:$PATH"
+
+    conda create -n mp -c conda-forge pymeep pymeep-extras
+
+
+    ---
+
+    Luego me pidió:
+
+    conda init
+
+    conda activate mp
+
+    -----
+
+"""
+
 
 def RunMeep(cilindro, acoplante,trans, Tx,caja,RES = 5,calibration = False, unit= a, nt = 600):
     #distintos ejes, x=-y e y=x)
@@ -305,7 +328,9 @@ def RunMeep(cilindro, acoplante,trans, Tx,caja,RES = 5,calibration = False, unit
 
     #nt = nt
 
-    sim.run(until=nt)
+    sim.run(mp.at_beginning(mp.output_epsilon),
+        mp.to_appended("ez", mp.at_every(10.0, mp.output_efield_z)),
+        until=nt)
     
     #sim.run(until_after_sources=mp.stop_when_dft_decayed())
 
@@ -478,6 +503,75 @@ def RunMeep2(cilindro1, cilindro2, acoplante, trans, Tx, caja, RES=5, calibratio
 
     return ez_data, eps_data
 
+
+
+
+def RunMeepCylCont(cilindro, acoplante,trans, Tx,caja,RES = 5,calibration = False, unit= a, nt = 600):
+    """
+        Función igual a RunMeep pero que además considera el tacho donde están las antenas y que contiene el líquido de acoplamiento.
+
+    """
+
+
+    #distintos ejes, x=-y e y=x)
+    a = unit #Meep unit
+    res = RES # pixels/a
+    dpml = 2
+
+    sx = caja[0]/a
+    sy = caja[1]/a
+
+    print('sxa: ',sx,'sxa: ',sy)
+
+    #rhoS = 1.5*c/trans.f
+
+    fcen = trans.f*(a/c)  # pulse center frequency
+    sigmaBackgroundMeep = acoplante.sigma*a/(c*acoplante.epsr*eps0)
+    sigmaCylinderMeep = cilindro.sigma*a/(c*cilindro.epsr*eps0)
+
+    materialBackground = mp.Medium(epsilon=acoplante.epsr, D_conductivity= sigmaBackgroundMeep) # Background dielectric properties at operation frequency
+    materialCilindro = mp.Medium(epsilon= cilindro.epsr, D_conductivity= sigmaCylinderMeep) # Cylinder dielectric properties at operation frequency
+
+    materialCilindroContenedor = mp.Medium(epsilon= 3.1, D_conductivity= 0.0) # Tacho que contiene las antenas y el medio de acoplamiento.
+
+    # default_material = materialBackground
+
+    Xc= cilindro.yc
+    Yc= cilindro.xc
+
+    #Simulation box and elements
+    cell = mp.Vector3(sx,sy,0)
+    pml_layers = [mp.PML(dpml)]
+
+    acrilico_tacho = 0.005 #radio del contenedor
+    if calibration:#el cilindro del centro es Background
+        geometry = [mp.Cylinder(material=materialCilindroContenedor, radius=(0.15+acrilico_tacho)/a, height=mp.inf, center=mp.Vector3(Xc/a,Yc/a,0)), mp.Cylinder(material=materialBackground, radius=(0.15)/a, height=mp.inf, center=mp.Vector3(Xc/a,Yc/a,0))]
+    else:#el cilindro del centro es la muestra
+        geometry = [mp.Cylinder(material=materialCilindroContenedor, radius=(0.15+acrilico_tacho)/a, height=mp.inf, center=mp.Vector3(Xc/a,Yc/a,0)), mp.Cylinder(material=materialBackground, radius=(0.15)/a, height=mp.inf, center=mp.Vector3(Xc/a,Yc/a,0)),mp.Cylinder(material=materialCilindro, radius=cilindro.radio/a, height=mp.inf, center=mp.Vector3(Xc/a,Yc/a,0))]
+
+    #arrreglado
+    xt = (trans.rhoS)*N.cos(Tx*2*pi/trans.S) #Coordenada x antena transmisora #Coordenada x antena transmisora
+    yt = (trans.rhoS)*N.sin(Tx*2*pi/trans.S) #Coordenada x antena transmisora(trans.rhoS)*N.cos(Tx*2*pi/trans.S) #Coordenada x antena transmisor
+
+
+    #amp = 1000
+    sources = [mp.Source(mp.ContinuousSource(frequency=fcen),component = mp.Ez,center = mp.Vector3(xt/a,yt/a,0.0), amplitude = trans.amp,size=mp.Vector3(0.0,0.0,mp.inf))]
+
+    sim = mp.Simulation(cell_size=cell, sources=sources, resolution=res, eps_averaging=False, geometry=geometry,boundary_layers=pml_layers,force_complex_fields = True)#default_material=default_material
+
+
+    #nt = nt
+
+    sim.run(mp.at_beginning(mp.output_epsilon),
+            mp.to_appended("ez", mp.at_every(10.0, mp.output_efield_z)),
+            until=nt)
+
+    #sim.run(until_after_sources=mp.stop_when_dft_decayed())
+
+    eps_data = sim.get_array(center=mp.Vector3(), size=cell, component=mp.Dielectric)
+    ez_data = sim.get_array(center=mp.Vector3(), size=cell, component=mp.Ez)
+
+    return ez_data,eps_data
 
 
 #
